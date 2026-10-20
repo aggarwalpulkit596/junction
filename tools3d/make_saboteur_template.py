@@ -81,8 +81,13 @@ rep("  <li>Rose, Sandy and Mint walk to everything they claim, so you can watch 
   <li><b>One of them is a saboteur.</b> Every third round it walks to a route and blacks it out for 2 rounds: nobody can claim it until it’s repaired. The ship log (<span class="keys">L</span>) records where every robot was seen, and if you’re standing nearby you’ll see who did it.</li>
   <li><b>Station tasks</b>: in a city you’ve connected, answer a question about its landmark (one task per turn) for a locomotive card or a robot’s alibi.</li>
   <li><b>Emergency meeting</b> (<span class="keys">R</span> or the red button): once per game, after the first sabotage, vote a suspect off the map. +15 if it’s the saboteur, −5 if it isn’t. A saboteur who’s never caught earns +10.</li>""")
-rep('sheet(`<div class="kicker">Four robots, one continent</div><h3>Walk Europe. Build the best railway.</h3>${rulesHTML()}',
-    'sheet(`<div class="kicker">Four robots, one saboteur</div><h3>Walk Europe. Build the best railway. Find the saboteur.</h3>${rulesHTML()}')
+# online play only knows the plain Europe rules, and the saboteur keeps its own Quick / Long balance
+rep("const ONLINE_OK=true;", "const ONLINE_OK=false;")
+rep("""const soloModesHTML=()=>`<div class="kicker">Play solo against the robots</div><div class="modes"><button class="btn primary" data-new="18">Blitz<small>18 trains each, a quick game</small></button><button class="btn" data-new="40">Classic<small>40 trains each, fills the map</small></button></div>`;""",
+    """const soloModesHTML=()=>`<div class="modes"><button class="btn primary" data-new="20">Quick game<small>20 trains each, about 10 minutes</small></button><button class="btn" data-new="30">Long game<small>30 trains each, fills the map</small></button></div>`;""")
+rep("  newGame(18,true);if(!netBoot())openStart();", "  newGame(20,true);if(!netBoot())openStart();")
+rep('sheet(`<div class="kicker">Four robots, one continent</div><h3>Walk Europe. Build the best railway.</h3>${soloModesHTML()}${onlineStartHTML()}\n  <div class="kicker orline">How to play</div>${rulesHTML()}`);',
+    'sheet(`<div class="kicker">Four robots, one saboteur</div><h3>Walk Europe. Build the best railway. Find the saboteur.</h3>${rulesHTML()}\n  ${soloModesHTML()}`);')
 
 # ---------- director clock (the trailer renders the real game frame by frame)
 rep("/* ===================================================================== 3D WORLD */",
@@ -185,9 +190,7 @@ rep("""    seaTex.offset.x=(t*.004)%1;
 }""")
 
 # ---------- director overrides: scripted walking speed, no idle wandering
-rep("const speed=(A.id===0?24:busyBot?(A.path&&A.path.length>2?80:50)*(FF?2.4:1):18)*dt;",
-    "const speed=(A.spd??(A.id===0?24:busyBot?(A.path&&A.path.length>2?80:50)*(FF?2.4:1):18))*dt;")
-rep("  if(A.id!==0&&!A.path&&!A.onArrive&&S&&!S.over){A.idle-=dt;", "  if(A.id!==0&&!A.path&&!A.onArrive&&S&&!S.over&&!A.still){A.idle-=dt;")
+# (A.spd and A.still are in the plain template now: online play uses them too)
 rep("ACT.forEach((A,i)=>{A.ejectT=null;A.splashed=false;A.pose=null;", "ACT.forEach((A,i)=>{A.ejectT=null;A.splashed=false;A.pose=null;A.spd=null;A.still=false;")
 
 # ---------- hooks: tests + the trailer director

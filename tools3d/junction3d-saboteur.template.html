@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Junction 3D: Saboteur Express</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
@@ -100,6 +101,29 @@ body{background:#bfe4f6;user-select:none;-webkit-user-select:none}
 #hint{left:50%;bottom:calc(122px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-size:12px;color:var(--ink);background:rgba(255,255,255,.75);border-radius:999px;padding:3px 10px;font-weight:700;pointer-events:none;white-space:nowrap}
 #boot{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#bfe4f6;font-family:'Fredoka';font-size:22px;color:#1c1d33;text-align:center;padding:24px}
 .keys{display:inline-block;border:2px solid var(--outline);border-radius:6px;padding:0 5px;font-size:12px;font-weight:800;margin:0 1px}
+/* online play: room bar, lobby, join form */
+.netbar{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.netbar[hidden]{display:none}
+.nb{background:var(--panel);border:2px solid var(--outline);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:800;box-shadow:0 2px 0 var(--outline);line-height:1.5;white-space:nowrap}
+.nb.hot{background:var(--danger);color:#fff}
+.nb.em{padding:2px 7px}
+.emotes{display:flex;gap:4px;margin-left:auto}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:800;color:var(--muted);margin:4px 0 10px}
+.field input,.joinrow input,.share input{font:inherit;font-size:16px;font-weight:800;color:var(--ink);background:var(--card);border:2.5px solid var(--outline);border-radius:12px;padding:10px 12px;width:100%;min-width:0;user-select:text;-webkit-user-select:text}
+.joinrow{display:flex;gap:8px}.joinrow input{text-transform:uppercase;letter-spacing:.2em;font-family:'Fredoka';flex:1}
+.share{display:flex;gap:8px;margin:4px 0 12px}.share input{font-size:13px}
+.code{font-family:'Fredoka';letter-spacing:.12em;background:var(--accent);color:var(--accentInk);border:2.5px solid var(--outline);border-radius:10px;padding:0 8px}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 12px}
+.seat{display:flex;align-items:center;gap:6px;border:2.5px solid var(--outline);border-radius:12px;padding:7px 9px;background:var(--card);font-weight:800;font-size:14px;min-width:0}
+.seat .sn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat svg{width:20px;height:27px;flex:none}
+.seat.empty{border-style:dashed;opacity:.7;font-weight:700}
+.seat .off{font-size:11px;color:var(--danger);margin-left:auto}
+.seat .tag{margin-left:auto}
+.btn.sel:disabled{opacity:1}
+.orline{text-align:center;margin:14px 0 8px}
+.tixlist{list-style:none;padding:0;margin:0 0 10px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.tixlist .bad{color:var(--danger)}.tixlist .ok{color:var(--good)}
 @media (max-width:640px){
   #hudLeft{width:150px;top:calc(146px + env(safe-area-inset-top,0px))}
   .mkrow{font-size:12px}
@@ -131,6 +155,7 @@ body{background:#bfe4f6;user-select:none;-webkit-user-select:none}
 <div id="hudTop" class="hud">
   <div class="roster" id="roster"></div>
   <div class="status" id="status" role="status" aria-live="polite"></div>
+  <div class="netbar" id="netbar" hidden><button class="nb" id="nbRoom" aria-label="Room menu">Room</button><span class="nb" id="nbTurn" aria-live="off"></span><span class="nb" id="nbClock"></span><span class="emotes" id="nbEmotes"></span></div>
 </div>
 <div id="hudRight" class="hud">
   <button class="iconbtn" id="helpBtn" aria-label="Rules">?</button>
@@ -470,8 +495,9 @@ function rulesHTML(){return `<ul>
 </ul>`}
 function openStart(){
   sheet(`<div class="kicker">Four robots, one saboteur</div><h3>Walk Europe. Build the best railway. Find the saboteur.</h3>${rulesHTML()}
-  <div class="modes"><button class="btn primary" data-new="20">Quick game<small>20 trains each, about 10 minutes</small></button><button class="btn" data-new="30">Long game<small>30 trains each, fills the map</small></button></div>`);
+  ${soloModesHTML()}`);
 }
+const soloModesHTML=()=>`<div class="modes"><button class="btn primary" data-new="20">Quick game<small>20 trains each, about 10 minutes</small></button><button class="btn" data-new="30">Long game<small>30 trains each, fills the map</small></button></div>`;
 /*@@OPENROUTE@@*/
 
 /* ===================================================================== SOUND (synthesized with Web Audio: no files) */
@@ -1047,13 +1073,302 @@ const A0y=A=>A.y;
 function musicMood(){return !S||S.over?'calm':S.meeting?'meeting':(S.lastTurns!==null||S.routes.some(r=>r.blocked))?'tense':'calm'}
 function DIRON(){return typeof DIR!=='undefined'&&DIR.on}
 
+/* ===================================================================== ONLINE: rooms on a Cloudflare Durable Object
+   The server owns the deck, hands and tickets and runs the robots; this page only sends intentions and draws
+   what the server says. Each sync rebuilds S from the server's view, rotated so you are always player 0. */
+const ONLINE_OK=false; // the saboteur build turns this off: the server only knows the Europe rules
+const NET_MODES={blitz:{name:'Blitz',blurb:'5–10 min',detail:'18 trains · 25s turns · 8 min clock'},classic:{name:'Classic',blurb:'about 30 min',detail:'40 trains · 45s turns · fills the map'}};
+const EMOTES=['👋','👍','😮','😅','🔥','GG'];
+const PLAYERS0=PLAYERS.map(p=>({...p})),SEATC=PLAYERS0.map(p=>p.col);
+const NET={on:false,ws:null,code:null,token:null,room:null,v:null,skew:0,keep:new Set(),offerKey:null,tunKey:null,finalShown:false,
+  logN:0,sig:'',gameKey:null,retry:0,lastPos:null,posT:0,pickMode:'blitz',closing:false,barKey:''};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const netNow=()=>Date.now()+NET.skew;
+const canOnline=()=>ONLINE_OK&&/^https?:$/.test(location.protocol);
+const mmss=ms=>{const s=Math.ceil(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function personal(t,me){ // the server writes names; you read "You"
+  if(!me)return t;const m=reEsc(me);
+  return t.replace(new RegExp('^'+m+' goes first'),'You go first').replace(new RegExp('^'+m+' '),'You ')
+    .replace(new RegExp('\\. '+m+' wins'),'. You win').replace(' for '+me+'.',' for you.');
+}
+function feedLine(t,k=''){const f=$('feed'),li=document.createElement('li');li.className=k;li.textContent=t;f.prepend(li);while(f.children.length>4)f.lastChild.remove();setTimeout(()=>li.remove(),7000)}
+function rebuildRobots(){ROBOTS.forEach(R=>scene.remove(R.root));ROBOTS.length=0;PLAYERS.forEach(p=>ROBOTS.push(makeRobot(p)))}
+
+/* ---- start screen, create / join ---- */
+function onlineStartHTML(){
+  if(!ONLINE_OK)return'';const st=store.get('junction-online');
+  return `<div class="kicker orline">Play with friends</div><div class="modes"><button class="btn primary" data-net="online">Play online<small>Up to 4 players, robots fill the rest</small></button>${st&&st.code&&canOnline()
+    ?`<button class="btn" data-net="rejoin">Rejoin room ${esc(st.code)}<small>Pick up where you left off</small></button>`
+    :`<button class="btn" data-net="joincode">Join with a code<small>A friend sent you 4 letters</small></button>`}</div>`;
+}
+function onlineSheet(prefCode,focusCode){
+  if(!canOnline()){sheet(`<div class="kicker">Play online</div><h3>Online play needs the hosted game</h3><p>Open Junction from its web address, or run <b>npm run dev</b> and open the local server, to play with friends.</p><button class="btn full" data-net="back">Back</button>`);return}
+  const mode=NET.pickMode;
+  sheet(`<div class="kicker">Play online</div><h3>Ride with friends</h3>
+  <p>Up to 4 players. Robots fill any empty seats, and take over if someone drops out or runs out of time.</p>
+  <label class="field"><span>Your name</span><input id="netName" maxlength="14" autocomplete="nickname" placeholder="e.g. Alex" value="${esc(store.get('junction-name')||'')}"></label>
+  <div class="kicker">Game length (for a new room)</div>
+  <div class="modes">${Object.entries(NET_MODES).map(([k,m])=>`<button class="btn ${k===mode?'sel':''}" data-pickmode="${k}" aria-pressed="${k===mode}">${m.name} · ${m.blurb}<small>${m.detail}</small></button>`).join('')}</div>
+  <button class="btn primary full" data-net="create">Create a room</button>
+  <div class="kicker orline">or join a friend’s room</div>
+  <div class="joinrow"><input id="netCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code" value="${esc(prefCode||'')}"><button class="btn" data-net="join">Join</button></div>
+  <p class="small" id="netMsg" role="alert"></p>
+  <button class="btn full" data-net="back">Back</button>`);
+  setTimeout(()=>{const n=$('netName');if(focusCode&&n&&n.value)$('netCode').focus();else if(n)n.focus()},60);
+}
+const netMsgEl=t=>{const m=$('netMsg');if(m)m.textContent=t};
+function netName(){const n=($('netName')&&$('netName').value||'').trim().slice(0,14);if(!n){netMsgEl('Type your name first.');$('netName')&&$('netName').focus();return null}store.set('junction-name',n);return n}
+async function netCreate(){
+  if(!netName())return;netMsgEl('Creating a room…');
+  try{const r=await fetch('/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode:NET.pickMode})});const j=await r.json();
+    if(!r.ok||!j.code)throw new Error(j.error||'The server said no.');netConnect(j.code,null)}
+  catch(e){netMsgEl('Couldn’t create a room: '+e.message)}
+}
+async function netJoin(){
+  const code=(($('netCode')&&$('netCode').value)||'').toUpperCase().replace(/[^A-Z]/g,'');
+  if(code.length!==4){netMsgEl('Room codes are 4 letters.');$('netCode')&&$('netCode').focus();return}
+  if(!netName())return;netMsgEl('Looking for room '+code+'…');
+  try{const r=await fetch('/api/rooms/'+code);const j=await r.json();
+    if(!r.ok||!j.exists){netMsgEl('There’s no room '+code+'. Check the code, or create a new room.');return}
+    if(j.over){netMsgEl('That game has finished. Ask the host to start another one.')}
+    const st=store.get('junction-online');netConnect(code,st&&st.code===code?st.token:null)}
+  catch(e){netMsgEl('Couldn’t reach the server: '+e.message)}
+}
+
+/* ---- the connection ---- */
+function netConnect(code,token){
+  NET.on=true;NET.code=code;NET.token=token||null;NET.closing=false;NET.room=null;NET.v=null;NET.retry=0;
+  store.set('junction-online',{code,token:NET.token,t:Date.now()});
+  history.replaceState(null,'',location.pathname+'?room='+code);
+  if(S){S.locked=true;S.busy=true}
+  $('ffBtn').hidden=true;
+  sheet(`<div class="kicker">Room ${esc(code)}</div><h3>Connecting…</h3><button class="btn full" data-net="leave">Cancel</button>`);
+  netOpen();
+}
+function netOpen(){
+  const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/api/rooms/'+NET.code+'/ws');NET.ws=ws;
+  ws.onopen=()=>{ws.send(JSON.stringify({t:'join',name:store.get('junction-name')||'Player',token:NET.token}))};
+  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}NET.retry=0;netOnMsg(m)};
+  ws.onclose=()=>{if(NET.ws!==ws)return;NET.ws=null;if(!NET.on||NET.closing)return;NET.retry++;
+    setTimeout(()=>{if(NET.on&&!NET.ws)netOpen()},Math.min(8000,500*2**Math.min(NET.retry,4)))};
+}
+const netSend=o=>{if(NET.ws&&NET.ws.readyState===1){NET.ws.send(JSON.stringify(o));return true}return false};
+function netAct(a){if(!netSend({t:'act',a})){feedLine('Not connected. Reconnecting…','danger');return}if(S)S.busy=true;render()}
+function netOnMsg(m){
+  if(m.t==='sync'){
+    NET.skew=m.now-Date.now();NET.room=m.room;
+    if(m.room.token&&m.room.token!==NET.token){NET.token=m.room.token;store.set('junction-online',{code:NET.code,token:NET.token,t:Date.now()})}
+    if(m.room.phase==='lobby'||!m.v){if(NET.v){NET.v=null;NET.gameKey=null}netLobby();return}
+    netApply(m.v,m.ev||[]);
+  }
+  else if(m.t==='pos')netPos(m.s,m.x,m.z);
+  else if(m.t==='emote')netEmote(m);
+  else if(m.t==='err')feedLine(m.msg,'danger');
+  else if(m.t==='bye')netLeave(m.msg,m.keep);
+}
+function netLeave(msg,keepSeat){
+  NET.closing=true;if(NET.ws){try{NET.ws.close()}catch(e){}}
+  Object.assign(NET,{on:false,ws:null,v:null,room:null,gameKey:null,sig:'',offerKey:null,tunKey:null});
+  if(!keepSeat)store.del('junction-online');history.replaceState(null,'',location.pathname);
+  PLAYERS.length=0;PLAYERS0.forEach(p=>PLAYERS.push({...p}));rebuildRobots();
+  ACT.forEach(A=>{A.remote=false;A.still=false;A.spd=undefined});
+  $('ffBtn').hidden=false;$('netbar').hidden=true;
+  newGame(18,true);openStart();
+  if(msg)feedLine(msg,'danger');
+}
+
+/* ---- lobby ---- */
+function netLobby(){
+  const R=NET.room;if(S)S.locked=true;NET.finalShown=false;
+  const link=location.origin+location.pathname+'?room='+R.code,humans=R.seats.filter(Boolean).length;
+  sheet(`<div class="kicker">Online room · ${R.host?'you’re the host':'waiting for the host'}</div><h3>Room <span class="code">${esc(R.code)}</span></h3>
+  <p>Send friends this link, or the code. Up to 4 players.</p>
+  <div class="share"><input readonly id="netLink" value="${esc(link)}" aria-label="Invite link"><button class="btn" data-net="copy">Copy</button>${navigator.share?'<button class="btn" data-net="share">Share</button>':''}</div>
+  <div class="seats">${[0,1,2,3].map(i=>{const s=R.seats[i];return `<div class="seat ${s?'':'empty'}">${sprocket(SEATC[i])}<span class="sn">${s?esc(s.name)+(i===R.you?' (you)':''):'A robot plays here'}</span>${s&&s.host?'<span class="tag">Host</span>':''}${s&&!s.online?'<span class="off">offline</span>':''}</div>`}).join('')}</div>
+  <div class="kicker">Game length</div>
+  <div class="modes">${Object.entries(R.modes).map(([k,m])=>`<button class="btn ${k===R.mode?'sel':''}" data-netmode="${k}" ${R.host?'':'disabled'} aria-pressed="${k===R.mode}">${esc(m.name)} · ${esc(m.blurb)}<small>${m.trains} trains · ${m.turnSec}s turns · ${m.clockMin} min clock</small></button>`).join('')}</div>
+  ${R.host?`<button class="btn primary full" data-net="start">Start the game${humans<4?` <small>(robots take ${4-humans} seat${4-humans>1?'s':''})</small>`:''}</button>`:note('The host starts the game when everyone’s in.')}
+  <button class="btn full" data-net="leave">Leave room</button>`);
+  render();
+}
+
+/* ---- a game sync from the server ---- */
+function netApply(v,ev){
+  NET.v=v;
+  if(NET.gameKey!==v.startedAt){ // a new game (or the first sync after joining one)
+    NET.gameKey=v.startedAt;NET.logN=Math.max(0,(v.logN||0)-3);NET.finalShown=v.over;NET.offerKey=null;NET.tunKey=null;NET.keep=new Set();
+    $('feed').innerHTML='';resetActors();if(sheetOpen())$('sheet').classList.add('hidden');
+  }
+  const sig=v.players.map(p=>p.name+p.col).join('|');
+  if(sig!==NET.sig){NET.sig=sig;PLAYERS.length=0;v.players.forEach((p,i)=>PLAYERS.push({id:i,name:i?p.name:'You',col:p.col,human:i===0}));rebuildRobots()}
+  const me=v.players[0].name,prev=S&&S.net?S:null;
+  S={net:true,deck:new Array(v.deckN),discard:new Array(v.discardN),market:v.market.slice(),marketCity:v.marketCity.slice(),ticketDeck:new Array(v.ticketDeckN),
+     turn:v.turn,round:v.round,drawn:v.drawn,over:v.over,lastTurns:v.lastTurns,busy:v.phase!=='play'||v.turn!==0||v.over,locked:false,
+     selected:prev?prev.selected:null,routeOpts:prev&&prev.routeOpts,cityOpts:prev&&prev.cityOpts,curCity:prev&&prev.curCity,
+     stationAt:v.stationAt,startTrains:0,log:v.log.map(l=>({t:personal(l.t,me),k:l.k})),offer:null,pending:null,
+     routes:ROUTES.map((r,i)=>({...r,owner:v.owners[i]})),
+     players:v.players.map((p,i)=>({id:i,name:i?p.name:'You',col:p.col,human:i===0,bot:p.bot,away:p.away,choosing:p.choosing,
+       hand:p.hand||{_:p.handN},trains:p.trains,stations:p.stations,tickets:p.tickets||[],ticketsN:p.ticketsN}))};
+  const fresh=Math.min((v.logN||0)-NET.logN,6);for(let i=fresh-1;i>=0;i--)if(S.log[i])feedLine(S.log[i].t,S.log[i].k);NET.logN=v.logN||0;
+  ev.forEach(netEvent);
+  if(v.offer){
+    const key=JSON.stringify(v.offer.list);S.offer={...v.offer,keep:NET.keep};S.locked=true;
+    if(key!==NET.offerKey){NET.offerKey=key;NET.keep=new Set();S.offer.keep=NET.keep;renderTicketChoice();SND.ready&&SND.fx.ticket()}
+  }else if(NET.offerKey){NET.offerKey=null;if(sheetOpen()&&$('sheetBody').querySelector('[data-keep]'))closeSheet(true)}
+  if(v.pending&&v.pending.mine){
+    S.pending=v.pending;S.locked=true;const key=v.pending.ri+'|'+v.pending.rev.join();
+    if(key!==NET.tunKey){NET.tunKey=key;netTunnel(v.pending)}
+  }else if(NET.tunKey){NET.tunKey=null;if(sheetOpen()&&$('sheetBody').querySelector('[data-tunnel]'))closeSheet(true)}
+  render();
+  if(v.over&&!NET.finalShown){NET.finalShown=true;setTimeout(netFinal,1200)}
+}
+function netEvent(e){
+  const A=ACT[e.s];
+  if(e.k==='goto'&&e.s!==0&&A){A.path=planTo(A,e.x,e.z)}
+  else if(e.k==='pick')fx.pickup(e.city,e.c);
+  else if(e.k==='claim')fx.hop(e.s);
+  else if(e.k==='puff')fx.puff(...routeMid(ROUTES[e.ri]));
+  else if(e.k==='tunnel'&&e.s===0)SND.ready&&SND.fx.tunnel(e.extra>0);
+  else if(e.k==='turn'&&e.s===0)SND.ready&&SND.fx.yourTurn();
+  else if(e.k==='final')SND.ready&&SND.fx.finalRound();
+  else if(e.k==='deck'&&e.s===0)SND.ready&&SND.fx.deck();
+}
+function netTunnel(P){
+  const r=ROUTES[P.ri],o=P.o;
+  const cards=P.rev.map(c=>cardHTML(c,'',(c==='loco'||(o.c!=='loco'&&c===o.c))?'hitc':'')).join('');
+  sheet(`<div class="kicker">Tunnel: ${nm(r.a)} to ${nm(r.b)}</div><h3>Flipping 3 cards</h3><div class="reveal">${cards}</div>
+  <p>${P.extra} card${P.extra>1?'s':''} matched, so this tunnel costs ${P.extra} more.</p><button class="btn primary full" data-tunnel="go">Pay ${payLabel(P.ex)}</button><button class="btn full" data-tunnel="back">Back off and keep your cards</button>`);
+}
+function netFinal(){
+  const v=NET.v;if(!v||!v.final)return;
+  const R=NET.room,rows=v.final,who=s=>s===0?'You':esc(v.players[s].name),w=rows[0];
+  const ex=rows.filter(r=>r.ex).map(r=>who(r.s));
+  sheet(`<div class="kicker">Final scores · ${NET_MODES[v.mode]?NET_MODES[v.mode].name:''} · room ${esc(R?R.code:'')}</div><h3>${w.s===0?'You win!':who(w.s)+' wins'}</h3>
+  <p>Longest continuous route: ${v.maxL} trains, held by ${ex.join(' and ')} for +10.</p>
+  <table class="score"><tr><th>Player</th><th>Routes</th><th>Tickets</th><th>Stations</th><th>Longest</th><th>Total</th></tr>
+  ${rows.map(r=>`<tr><td><span class="who">${sprocket(v.players[r.s].col)}${who(r.s)}</span></td><td>${r.rp}</td><td>${r.tp>0?'+':''}${r.tp}</td><td>+${r.st}</td><td>${r.ex?'+10':'0'}</td><td class="tot">${r.total}</td></tr>`).join('')}
+  </table>
+  <ul class="tixlist">${rows.map(r=>`<li><b>${who(r.s)}:</b> ${(v.players[r.s].tickets||[]).map((t,i)=>`<span class="${r.det[i]?'ok':'bad'}">${r.det[i]?'✓':'✗'} ${nm(t.a)}–${nm(t.b)} (${t.p})</span>`).join(' · ')||'no tickets'}</li>`).join('')}</ul>
+  ${R&&R.host?'<button class="btn primary full" data-net="again">Play again in this room</button>':note('The host can start another game in this room.')}
+  <button class="btn full" data-net="leave">Leave room</button>${closeBtn()}`);
+}
+
+/* ---- other players' robots ---- */
+function netPos(s,x,z){
+  const A=ACT[s];if(!A||s===0||!NET.v)return;
+  A.remote=true;A.still=true;
+  if(Math.hypot(A.x-x,A.z-z)>45){A.x=x;A.z=z;A.path=null}else A.path=[[x,z]];
+}
+function netEmote(m){
+  const s=NET.v?m.s:-1,who=s===0?'You':esc(m.name);
+  feedLine(`${who}: ${m.e}`);
+  if(s>=0&&ROBOTS[s]){const sp=labelSprite(m.e,{bg:'#ffffff',size:2.2});sp.position.y=8.4;ROBOTS[s].root.add(sp);
+    setTimeout(()=>{ROBOTS[s]&&ROBOTS[s].root.remove(sp);sp.material.map.dispose();sp.material.dispose()},2600)}
+}
+
+/* ---- the room bar: code, turn timer, game clock, emotes (refreshed with the HUD, 10 times a second) ---- */
+$('nbEmotes').innerHTML=EMOTES.map(e=>`<button class="nb em" data-emote="${e}" aria-label="Send ${e}">${e}</button>`).join('');
+$('nbEmotes').addEventListener('click',e=>{const b=e.target.closest('[data-emote]');if(b)netSend({t:'emote',e:b.dataset.emote})});
+$('nbRoom').onclick=()=>{if(!NET.on)return;if(!NET.v)return netLobby();if(NET.v.over)return netFinal();
+  sheet(`<div class="kicker">Online room</div><h3>Room <span class="code">${esc(NET.code)}</span></h3><p>${NET_MODES[NET.v.mode].name} game, round ${NET.v.round}. If you leave, a robot takes over your seat.</p>
+  <div class="share"><input readonly value="${esc(location.origin+location.pathname+'?room='+NET.code)}" aria-label="Invite link"><button class="btn" data-net="copy">Copy</button></div>
+  <button class="btn full" data-net="leave">Leave room</button>${closeBtn()}`)};
+function netBar(){
+  const b=$('netbar');if(b.hidden===NET.on){b.hidden=!NET.on;const tb=$('hudTop').getBoundingClientRect().bottom+8;$('hudLeft').style.top=tb+'px'}
+  if(!NET.on)return;
+  const R=NET.room,v=NET.v;let turn,clock='',hot=false;
+  if(!NET.ws)turn='Reconnecting…';
+  else if(!v)turn=R?`Lobby · ${R.seats.filter(Boolean).length}/4 players`:'Connecting…';
+  else if(v.over)turn='Game over · tap Room for scores';
+  else{const now=netNow();
+    if(v.phase==='tickets')turn=`Choosing tickets · ${Math.max(0,Math.ceil((v.ticketEnds-now)/1000))}s`;
+    else{const sec=Math.max(0,Math.ceil((v.turnEnds-now)/1000)),p=v.players[v.turn];turn=`${v.turn===0?'Your turn':p.name+(p.bot?' 🤖':'')} · ${sec}s`;hot=v.turn===0&&sec<=5}
+    clock=v.lastTurns!==null?'Final round':'🕒 '+mmss(Math.max(0,v.clockEnds-now))}
+  const key=[R&&R.code,turn,clock,hot].join('|');if(key===NET.barKey)return;NET.barKey=key;
+  $('nbRoom').textContent='Room '+(R?R.code:NET.code||'');$('nbTurn').textContent=turn;$('nbTurn').classList.toggle('hot',hot);
+  $('nbClock').textContent=clock;$('nbClock').hidden=!clock;
+}
+function netStep(){
+  netBar();
+  const v=NET.v;if(!v||v.over)return;
+  const k=v.mode==='blitz'?1.35:1;
+  ACT.forEach((A,i)=>{const p=S.players[i];if(!p)return;
+    A.spd=i===0?24*k:p.bot?(S.turn===i?(v.mode==='blitz'?90:60)*1.1:undefined):34*k;
+    if(p.bot){A.remote=false;A.still=false}});
+  const A=ACT[0],t=performance.now();
+  if((!NET.lastPos||Math.hypot(A.x-NET.lastPos[0],A.z-NET.lastPos[1])>.5)&&t-NET.posT>100){NET.lastPos=[A.x,A.z];NET.posT=t;netSend({t:'pos',x:+A.x.toFixed(1),z:+A.z.toFixed(1)})}
+}
+function netStatus(){
+  const v=NET.v,st=$('status');let t,c='status';
+  if(v.over){c+=' wait';t='Game over. Tap Room for the scores.'}
+  else if(S.offer)t='Choose which tickets to keep.';
+  else if(v.phase==='tickets'){c+=' wait';const n=v.players.filter(p=>p.choosing).length;t=`Waiting for ${n} player${n>1?'s':''} to choose tickets…`}
+  else if(S.pending)t='Tunnel! Pay the extra or back off.';
+  else if(v.turn!==0){c+=' wait';const p=v.players[v.turn];t=`${esc(p.name)}${p.bot?' (robot)':p.away?' (away, a robot is helping)':''} is ${v.lastTurns!==null?'playing their final turn':'on the move'}… explore while you wait.`}
+  else if(S.busy){c+=' wait';t='Sending…'}
+  else return; // your turn: the usual instructions
+  st.className=c+(v.lastTurns!==null&&!v.over?' final':'');st.innerHTML='<span class="dot"></span>'+t;
+}
+function netReshow(){
+  if(!NET.on||sheetOpen())return;
+  if(!NET.v){if(NET.room)netLobby();return}
+  if(S.offer)renderTicketChoice();else if(S.pending)netTunnel(S.pending);
+}
+
+/* ---- online versions of your actions: send them, the server answers with a sync ---- */
+{const f=takeMarket;takeMarket=function(i){if(!NET.on)return f(i);if(!canAct())return;const c=S.market[i];if(!c)return;
+  if(c==='loco'&&S.drawn===1){feedLine('A floating locomotive can’t be your second card.','danger');return}netAct({t:'market',i})}}
+{const f=takeDeck;takeDeck=function(){if(!NET.on)return f();if(!canAct()||!(S.deck.length+S.discard.length))return;netAct({t:'deck'})}}
+{const f=startClaim;startClaim=function(ri,o){if(!NET.on)return f(ri,o);if(!canAct()||!o)return;closeSheet(true);netAct({t:'claim',ri,o:{c:o.c,n:o.n,w:o.w}})}}
+{const f=tunnelResolve;tunnelResolve=function(go){if(!NET.on)return f(go);S.pending=null;S.locked=false;closeSheet(true);netAct({t:'tunnel',go})}}
+{const f=buildStation;buildStation=function(j){if(!NET.on)return f(j);const o=S.cityOpts&&S.cityOpts[j];if(!o||!canAct())return;closeSheet(true);netAct({t:'station',city:S.curCity,o:{c:o.c,n:o.n,w:o.w}})}}
+{const f=confirmTickets;confirmTickets=function(){if(!NET.on)return f();const{keep,min,list}=S.offer;if(keep.size<min)return;
+  const idx=[...keep].filter(i=>i<list.length);S.offer=null;S.locked=false;closeSheet(true);netAct({t:'keep',idx})}}
+{const f=drawTicketsHuman;drawTicketsHuman=function(){if(!NET.on)return f();if(!canAct()||S.drawn||!S.ticketDeck.length)return;netAct({t:'tickets'})}}
+$('tixBtn').onclick=()=>drawTicketsHuman();
+{const f=render;render=function(){f();if(NET.on&&NET.v&&S&&S.net)netStatus();else if(NET.on){const st=$('status');st.className='status wait';st.innerHTML=`<span class="dot"></span>${NET.room?'Online lobby: room '+esc(NET.room.code):'Connecting…'}`}}}
+{const f=closeSheet;closeSheet=function(force){f(force);if(NET.on&&!sheetOpen())setTimeout(netReshow,0)}}
+{const f=stepUI;stepUI=function(){f();if(NET.on)netStep()}}
+{const f=endGame;endGame=function(){f();const m=$('sheetBody').querySelector('.modes');if(m&&!NET.on)m.outerHTML=soloModesHTML()}}
+sheetEl.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||b.disabled)return;const d=b.dataset;
+  if(d.pickmode){NET.pickMode=d.pickmode;$('sheetBody').querySelectorAll('[data-pickmode]').forEach(x=>{const on=x.dataset.pickmode===d.pickmode;x.classList.toggle('sel',on);x.setAttribute('aria-pressed',on)})}
+  else if(d.netmode)netSend({t:'mode',mode:d.netmode});
+  else if(d.net){const k=d.net;
+    if(k==='online')onlineSheet();
+    else if(k==='joincode')onlineSheet('',true);
+    else if(k==='rejoin'){const st=store.get('junction-online');if(st)netConnect(st.code,st.token)}
+    else if(k==='create')netCreate();
+    else if(k==='join')netJoin();
+    else if(k==='back')openStart();
+    else if(k==='start')netSend({t:'start'});
+    else if(k==='again')netSend({t:'again'});
+    else if(k==='leave'){netSend({t:'leave'});netLeave('')}
+    else if(k==='copy'){const i=b.parentElement.querySelector('input'),done=()=>{b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1600)};
+      if(navigator.clipboard)navigator.clipboard.writeText(i.value).then(done,()=>{i.select();document.execCommand('copy');done()});else{i.select();document.execCommand('copy');done()}}
+    else if(k==='share')navigator.share({title:'Junction 3D',text:`Join my Junction room ${NET.code}`,url:location.origin+location.pathname+'?room='+NET.code}).catch(()=>{});
+  }
+});
+sheetEl.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='netCode'){e.preventDefault();netJoin()}else if(e.target.id==='netName'){e.preventDefault();($('netCode').value.trim()?netJoin:netCreate)()}});
+function netBoot(){ // ?room=ABCD opens the join form (or rejoins your seat)
+  if(!ONLINE_OK)return false;
+  const q=new URLSearchParams(location.search).get('room');if(!q)return false;
+  const code=q.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
+  if(!canOnline()){onlineSheet(code);return true}
+  const st=store.get('junction-online');
+  if(st&&st.code===code&&st.token&&store.get('junction-name')){netConnect(code,st.token);return true}
+  onlineSheet(code,true);return true;
+}
+
 /* ---- boot ---- */
 async function boot(){
   try{await Promise.race([Promise.all([document.fonts.load('800 46px Nunito'),document.fonts.load('700 20px Fredoka')]),new Promise(r=>setTimeout(r,2500))])}catch(e){}
   if(innerWidth<innerHeight)CAM.dist=CAM.cur=140;
   buildCities();buildRoutes();buildCards();
   PLAYERS.forEach(p=>ROBOTS.push(makeRobot(p)));
-  newGame(20,true);openStart();
+  newGame(20,true);if(!netBoot())openStart();
   $('boot').remove();
   requestAnimationFrame(loop);
 }
@@ -1072,6 +1387,8 @@ window.J={get S(){return S},newGame,botTurn,endTurn,H,ACT,walkTo,interactions,ta
     projectXZ(x,y,z){v3.set(x,y,z).project(camera);return[(v3.x+1)/2*innerWidth,(1-v3.y)/2*innerHeight]},
     get t(){return DIR.t}},
   setFast:v=>{FAST=v},render,canAct,walkable,planTo};
+window.JN={get NET(){return NET},get S(){return S},netSend,ACT,interactions,useNow,openRoute,openCity,payOptions,stationOptions,H,canAct,
+  takeMarket:i=>takeMarket(i),takeDeck:()=>takeDeck(),startClaim:(ri,o)=>startClaim(ri,o),tunnelResolve:g=>tunnelResolve(g),confirmTickets:()=>confirmTickets(),drawTickets:()=>drawTicketsHuman()};
 </script>
 </body>
 </html>

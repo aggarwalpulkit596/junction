@@ -1,0 +1,21 @@
+# Cloudflare deploy config: one Worker serves the static site (public/) and the multiplayer API (/api/*).
+# Each room is a Durable Object (class Room) with SQLite storage, which works on the Workers Free plan.
+name = "junction"
+main = "worker/index.js"
+compatibility_date = "2025-10-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+[observability]
+enabled = true

@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Junction: Europe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#bfe4f6;--panel:#ffffff;--ink:#1c1d33;--muted:#575b78;--outline:#1c1d33;--line:#d4d9e8;
+  --sea:#6fc3ea;--wave:rgba(255,255,255,.4);--land:#f3df9f;--accent:#ffc933;--accentInk:#1c1d33;
+  --danger:#e5484d;--good:#0f9e86;--card:#eef2fa;--scrim:rgba(28,29,51,.5);--lbl:#1c1d33;--halo:#f3df9f;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151834;--panel:#22264d;--ink:#f1f2ff;--muted:#a6aad0;--outline:#0a0b1e;--line:#353a70;
+    --sea:#1e3c78;--wave:rgba(255,255,255,.09);--land:#4b6b47;--accent:#ffc933;--accentInk:#1c1d33;
+    --danger:#ff5c63;--good:#34d3b2;--card:#2c3060;--scrim:rgba(5,6,20,.65);--lbl:#f6f7ff;--halo:#253a24;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151834;--panel:#22264d;--ink:#f1f2ff;--muted:#a6aad0;--outline:#0a0b1e;--line:#353a70;
+  --sea:#1e3c78;--wave:rgba(255,255,255,.09);--land:#4b6b47;--accent:#ffc933;--accentInk:#1c1d33;
+  --danger:#ff5c63;--good:#34d3b2;--card:#2c3060;--scrim:rgba(5,6,20,.65);--lbl:#f6f7ff;--halo:#253a24;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:600;line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{max-width:600px;margin:0 auto;padding:12px 12px 40px}
+h1,h2,h3,.fd{font-family:'Fredoka','Nunito',system-ui,sans-serif}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 2px 12px}
+.brand{display:flex;gap:10px;align-items:center}
+.brand svg{width:34px;height:46px}
+h1{font-size:28px;font-weight:700;line-height:1}
+.sub{font-size:13px;color:var(--muted);margin-top:3px}
+.iconbtn{width:42px;height:42px;border-radius:50%;border:2.5px solid var(--outline);background:var(--panel);font-family:'Fredoka';font-weight:700;font-size:18px;box-shadow:0 3px 0 var(--outline)}
+
+.roster{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:9px}
+.mate{background:var(--panel);border:2.5px solid var(--outline);border-radius:14px;padding:6px 3px 7px;text-align:center;box-shadow:0 3px 0 var(--outline);transition:transform .15s}
+.mate.turn{background:var(--accent);color:var(--accentInk);transform:translateY(-2px)}
+.mate svg{width:24px;height:33px;display:block;margin:0 auto 1px}
+.mate .nm{font-family:'Fredoka';font-weight:600;font-size:14px;line-height:1.1}
+.mate .meta{font-size:11px;line-height:1.3;opacity:.8}
+
+.status{border-radius:14px;padding:10px 13px;font-size:14.5px;font-weight:700;background:var(--panel);border:2.5px solid var(--outline);margin-bottom:9px;min-height:46px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 0 var(--outline)}
+.status .dot{width:12px;height:12px;border-radius:50%;background:var(--good);border:2px solid var(--outline);flex:none}
+.status.wait{color:var(--muted)}
+.status.wait .dot{background:var(--accent)}
+.status.final .dot{background:var(--danger)}
+
+.mapwrap{position:relative;border:2.5px solid var(--outline);border-radius:18px;overflow:hidden;margin-bottom:11px;box-shadow:0 4px 0 var(--outline);background:var(--sea)}
+.mapscroll{overflow:auto;-webkit-overflow-scrolling:touch}
+#map{display:block;width:100%;height:auto;touch-action:pan-x pan-y}
+.zoomed #map{width:230%}
+.zoom{position:absolute;right:8px;top:8px;z-index:2;border:2.5px solid var(--outline);background:var(--panel);border-radius:10px;padding:4px 10px;font-family:'Fredoka';font-weight:600;font-size:13px;box-shadow:0 2px 0 var(--outline)}
+.land{fill:var(--land);stroke:var(--outline);stroke-width:1.5;stroke-linejoin:round}
+.seafill{fill:var(--sea)}
+.blacksea{fill:var(--sea);stroke:var(--outline);stroke-width:1.5;stroke-linejoin:round}
+.wavepath{fill:none;stroke:var(--wave);stroke-width:1.4;stroke-linecap:round}
+.car{stroke:var(--outline);stroke-width:1.1;fill-opacity:.8}
+.car.own{fill-opacity:1;stroke-width:1.5}
+.car.tun{stroke-dasharray:2.2 1.3}
+.car.own.tun{stroke-dasharray:none}
+.locomark{fill:#fff;stroke:var(--outline);stroke-width:.9}
+.win{fill:#fff;opacity:.9}
+.hit{stroke:transparent;stroke-width:13;cursor:pointer}
+.selglow{stroke:var(--accent);stroke-width:12;stroke-linecap:round;opacity:.85}
+.cityhit{fill:transparent}
+.city{cursor:pointer}
+.node{fill:#fff;stroke:var(--outline);stroke-width:1.8}
+.node.stamped{fill:var(--accent)}
+.station{stroke:var(--outline);stroke-width:1.1;stroke-linejoin:round}
+.lbl{font-family:'Nunito',sans-serif;font-size:7.6px;font-weight:800;fill:var(--lbl);paint-order:stroke;stroke:var(--halo);stroke-width:2.6px;stroke-linejoin:round;pointer-events:none}
+
+.panel{background:var(--panel);border:2.5px solid var(--outline);border-radius:16px;padding:11px 12px 13px;margin-bottom:11px;box-shadow:0 4px 0 var(--outline)}
+.ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px}
+h2{font-size:17px;font-weight:600}
+.hint{font-size:12.5px;color:var(--muted)}
+.cards{display:flex;flex-wrap:wrap;gap:9px}
+.cardface{width:48px;height:64px;border-radius:10px;background:var(--c);border:2.5px solid var(--outline);box-shadow:0 3px 0 var(--outline);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative}
+.cardface svg{width:30px;height:20px}
+.cardface .cl{font-size:10px;font-weight:800;color:#1c1d33;background:rgba(255,255,255,.85);border-radius:6px;padding:0 5px;line-height:15px}
+.cardface.loco{background:conic-gradient(from 30deg,#ef4f4f,#ff8c2e,#ffd23f,#3fbf5f,#3d7dfa,#a35cf0,#ef4f4f)}
+.cardface .n{position:absolute;top:-9px;right:-9px;background:var(--outline);color:#fff;border-radius:12px;min-width:23px;height:23px;font-size:12px;display:grid;place-items:center;padding:0 6px;border:2px solid var(--panel)}
+.cardface.deck{background:repeating-linear-gradient(45deg,var(--card),var(--card) 5px,var(--line) 5px,var(--line) 10px)}
+.cardface.empty{background:transparent;box-shadow:none;border-style:dashed;opacity:.5}
+button.mk{background:none;border:none;padding:0;border-radius:10px}
+button.mk:active:not(:disabled) .cardface{transform:translateY(2px);box-shadow:0 1px 0 var(--outline)}
+button.mk:disabled{opacity:.38;cursor:default}
+.handrow{display:flex;flex-wrap:wrap;gap:12px;padding-top:6px}
+
+.btn{display:flex;align-items:center;gap:6px;padding:12px 14px;border-radius:13px;border:2.5px solid var(--outline);background:var(--card);font-weight:800;font-size:15px;text-align:left;box-shadow:0 3px 0 var(--outline)}
+.btn:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 var(--outline)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.full{width:100%;justify-content:center;margin-top:10px}
+.btn.primary{background:var(--accent);color:var(--accentInk)}
+.btn.sel{background:var(--accent);color:var(--accentInk)}
+.tickbtn{margin-top:12px;width:100%;justify-content:center}
+
+.tix{display:flex;flex-direction:column;gap:8px}
+.ticket{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;font-weight:800;padding:9px 11px;border-radius:12px;background:var(--card);border:2px dashed var(--line)}
+.ticket.ok{border:2px solid var(--good)}
+.ticket .pts{font-family:'Fredoka';font-weight:700;font-size:17px}
+.ticket.ok .pts{color:var(--good)}
+.tag{font-size:10.5px;font-weight:800;background:var(--outline);color:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+
+#log{list-style:none;padding:0;display:flex;flex-direction:column;gap:7px;font-size:13.5px;line-height:1.4;font-weight:600}
+#log li{padding-left:10px;border-left:3px solid var(--line)}
+#log li.danger{border-color:var(--danger)}
+#log li.good{border-color:var(--good)}
+
+.overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.overlay.hidden{display:none}
+.sheet{background:var(--panel);width:100%;max-width:600px;border-radius:24px 24px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:88vh;overflow:auto;border:2.5px solid var(--outline);border-bottom:none;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(28px)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}.mate{transition:none}}
+.sheet h3{font-size:24px;font-weight:700;line-height:1.15;margin-bottom:8px}
+.kicker{font-size:13px;color:var(--muted);font-weight:800;margin:4px 0 6px}
+.sheet p{font-size:15px;margin-bottom:12px;max-width:62ch}
+.sheet p.small{font-size:13px;color:var(--muted);margin-top:10px}
+.sheet ul{padding-left:18px;margin-bottom:12px;font-size:14.5px}
+.sheet li{margin-bottom:7px}
+.note{padding:11px 12px;border-radius:12px;background:var(--card);font-size:14.5px;margin:4px 0 4px}
+.payopts{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px}
+.sw{display:inline-block;width:16px;height:16px;border-radius:5px;border:2px solid var(--outline);flex:none}
+.sw.swloco{background:conic-gradient(#ef4f4f,#ff8c2e,#ffd23f,#3fbf5f,#3d7dfa,#a35cf0,#ef4f4f)}
+.plus{margin:0 4px;opacity:.6}
+.postcard{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.pcE{font-size:34px;width:60px;height:60px;border-radius:14px;background:var(--card);border:2.5px solid var(--outline);display:grid;place-items:center;flex:none}
+.stamp{display:inline-block;font-size:11px;font-weight:800;color:var(--good);border:2px solid var(--good);border-radius:6px;padding:0 6px;margin-left:6px;transform:rotate(-4deg)}
+.reveal{display:flex;gap:10px;margin:6px 0 12px}
+.reveal .cardface.hitc{outline:3px solid var(--danger);outline-offset:3px}
+.tkchoice{display:flex;flex-direction:column;gap:9px;margin-bottom:6px}
+.tkchoice .btn{justify-content:space-between}
+table.score{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 10px}
+table.score th{text-align:right;font-weight:800;color:var(--muted);font-size:11.5px;padding:4px 3px}
+table.score th:first-child,table.score td:first-child{text-align:left}
+table.score td{padding:8px 3px;border-top:2px solid var(--line);text-align:right}
+table.score td.tot{font-family:'Fredoka';font-weight:700;font-size:18px}
+.who{display:flex;align-items:center;gap:6px;font-weight:800}
+.who svg{width:16px;height:22px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.modes .btn{flex-direction:column;align-items:flex-start;gap:2px}
+.modes small{font-weight:600;font-size:12.5px;opacity:.75}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><span id="logo"></span><div><h1>Junction</h1><div class="sub">Rails across Europe</div></div></div>
+    <button class="iconbtn" id="helpBtn" aria-label="Rules">?</button>
+  </header>
+  <div class="roster" id="roster"></div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <div class="mapwrap" id="mapwrap">
+    <button class="zoom" id="zoomBtn">Zoom in</button>
+    <div class="mapscroll" id="mapscroll"><svg id="map" viewBox="0 0 392 300" role="img" aria-label="Rail map of Europe"></svg></div>
+  </div>
+  <section class="panel">
+    <div class="ph"><h2>Your hand</h2><span class="hint" id="trains"></span></div>
+    <div class="handrow" id="hand"></div>
+  </section>
+  <section class="panel">
+    <div class="ph"><h2>Train cards</h2><span class="hint" id="draws"></span></div>
+    <div class="cards" id="market"></div>
+    <button class="btn tickbtn" id="tixBtn"></button>
+  </section>
+  <section class="panel">
+    <div class="ph"><h2>Your tickets</h2><span class="hint" id="cards"></span></div>
+    <div class="tix" id="tickets"></div>
+  </section>
+  <section class="panel">
+    <div class="ph"><h2>Log</h2></div>
+    <ol id="log"></ol>
+  </section>
+</div>
+<div class="overlay hidden" id="sheet"><div class="sheet" id="sheetBody" role="dialog" aria-modal="true"></div></div>
+
+<script>
+/* ===== data ===== */
+const COLS=['red','orange','yellow','green','blue','purple','white','black'];
+const HEX={red:'#ef4f4f',orange:'#ff8c2e',yellow:'#ffd23f',green:'#3fbf5f',blue:'#3d7dfa',purple:'#a35cf0',white:'#f7f7fb',black:'#3a3c55',gray:'#bfc3d2'};
+const PTS={1:1,2:2,3:4,4:7,6:15,8:21};
+const proj=(lo,la)=>[+((lo+10)*7.5+14).toFixed(1),+((61-la)*11.2+12).toFixed(1)];
+const CITY_DATA={
+  LIS:['Lisboa',-9.1,38.7,'b'],MAD:['Madrid',-3.7,40.4,'b'],BCN:['Barcelona',2.2,41.4,'b'],MRS:['Marseille',5.4,43.3,'b'],
+  PAR:['Paris',2.35,48.85,'l'],LON:['London',-0.1,51.5,'l'],EDI:['Edinburgh',-3.2,55.95,'l'],AMS:['Amsterdam',4.9,52.4,'t'],
+  FRA:['Frankfurt',8.7,50.1,'t'],ZUR:['Zürich',8.5,47.4,'l'],MUN:['München',11.6,48.1,'t'],BER:['Berlin',13.4,52.5,'t'],
+  CPH:['København',12.6,55.7,'r'],STO:['Stockholm',18.1,59.3,'l'],VEN:['Venezia',12.3,45.4,'l'],ROM:['Roma',12.5,41.9,'b'],
+  BRI:['Brindisi',17.7,40.5,'r'],WIE:['Wien',16.4,48.2,'t'],BUD:['Budapest',19.0,47.5,'r'],WAR:['Warszawa',21.0,52.2,'t'],
+  ZAG:['Zagreb',16.0,45.8,'b'],SOF:['Sofia',23.3,42.7,'l'],ATH:['Athína',23.7,38.0,'b'],BUC:['București',26.1,44.4,'r'],
+  IST:['İstanbul',29.0,41.0,'r'],KYI:['Kyiv',30.5,50.45,'r'],RIG:['Rīga',24.1,56.95,'t'],MOS:['Moskva',37.6,55.75,'t']
+};
+const INFO={
+  LIS:['🗼','Belém Tower','Finished in 1519, this riverside fort guarded the mouth of the Tagus as ships left for India and Brazil.'],
+  MAD:['🖼️','Museo del Prado','Opened in 1819, the Prado holds the world’s great Velázquez and Goya collections, including Las Meninas.'],
+  BCN:['⛪','Sagrada Família','Gaudí’s basilica has been under construction since 1882. Its towers are still being finished today.'],
+  MRS:['⚓','Vieux-Port','Greek sailors founded the city here around 600 BC as Massalia, making it France’s oldest city.'],
+  PAR:['🗼','Eiffel Tower','Built for the 1889 World’s Fair and meant to be temporary, it is now about 330 m tall with its antennas.'],
+  LON:['🌉','Tower Bridge','Opened in 1894, its two roadway halves still lift so tall ships can pass along the Thames.'],
+  EDI:['🏰','Edinburgh Castle','The castle sits on the plug of an extinct volcano. The One O’Clock Gun fires from it every day except Sunday.'],
+  AMS:['🚲','Canal ring','Dug in the 1600s, the three main canals of the ring became a UNESCO World Heritage site in 2010.'],
+  FRA:['🏛️','Römer','A medieval house on the Römerberg square has served as Frankfurt’s city hall since 1405.'],
+  ZUR:['⛪','Grossmünster','Huldrych Zwingli launched the Swiss Reformation from this twin-towered church in 1519.'],
+  MUN:['🔔','Marienplatz Glockenspiel','Twice a day, life-size figures in the town hall tower act out a 16th-century royal wedding and a coopers’ dance.'],
+  BER:['🏛️','Brandenburg Gate','Completed in 1791, the gate stood in the no-man’s-land of the Berlin Wall until 1989.'],
+  CPH:['⛵','Nyhavn','A 17th-century harbour lined with painted townhouses. Hans Christian Andersen lived at three different addresses here.'],
+  STO:['🚢','Vasa Museum','The warship Vasa sank on its maiden voyage in 1628. It was raised almost intact in 1961.'],
+  VEN:['🛶','Grand Canal','The city’s main waterway runs about 3.8 km and is crossed by only four bridges, the oldest being the Rialto.'],
+  ROM:['🏟️','Colosseum','Opened in AD 80, the amphitheatre held around 50,000 spectators for games and spectacles.'],
+  BRI:['🏛️','Roman column','A marble column by the harbour traditionally marks the end of the Via Appia, Rome’s great road south.'],
+  WIE:['👑','Schönbrunn Palace','The Habsburgs’ summer residence has 1,441 rooms. Mozart played here for Empress Maria Theresa at age six.'],
+  BUD:['♨️','Széchenyi Baths','Opened in 1913 and fed by natural hot springs, it is one of Europe’s largest thermal baths.'],
+  WAR:['🏘️','Old Town','Nearly destroyed in 1944, the Old Town was rebuilt brick by brick from old paintings and records.'],
+  ZAG:['⛪','St. Mark’s Church','Its roof tiles form the coats of arms of Zagreb and of Croatia, Slavonia and Dalmatia.'],
+  SOF:['⛪','Alexander Nevsky Cathedral','Completed in 1912, its gold-leaf domes make it one of the largest Orthodox cathedrals in the Balkans.'],
+  ATH:['🏛️','Parthenon','Completed in 432 BC on the Acropolis, it was dedicated to Athena, the city’s patron goddess.'],
+  BUC:['🏢','Palace of the Parliament','Built in the 1980s, it is one of the heaviest buildings in the world.'],
+  IST:['🕌','Hagia Sophia','Finished in 537, its dome was the largest in the world for nearly a thousand years.'],
+  KYI:['⛪','St. Sophia Cathedral','Founded in the 11th century, it still holds original mosaics and frescoes from that era.'],
+  RIG:['🏙️','Art Nouveau district','About a third of the buildings in central Rīga are Art Nouveau, one of the densest collections anywhere.'],
+  MOS:['⛪','St. Basil’s Cathedral','Completed in 1561 for Ivan the Terrible, it is famous for its painted onion domes.']
+};
+const RDATA=[
+  ['LIS','MAD','purple',3],['MAD','BCN','yellow',2],['MAD','PAR','orange',4,1],['BCN','MRS','gray',2],['PAR','MRS','black',4],
+  ['PAR','LON','gray',2,0,1],['LON','EDI','white',4],['LON','AMS','gray',2,0,2],['PAR','AMS','yellow',3],['PAR','FRA','white',3],
+  ['PAR','ZUR','green',3],['AMS','FRA','blue',2],['AMS','BER','red',3],['AMS','CPH','gray',3,0,1],['FRA','BER','black',3],
+  ['FRA','MUN','purple',2],['FRA','ZUR','orange',2],['ZUR','MUN','yellow',1,1],['ZUR','MRS','purple',3,1],['ZUR','VEN','green',2,1],
+  ['MRS','ROM','gray',4],['MUN','VEN','blue',2,1],['MUN','WIE','orange',3],['MUN','BER','green',3],['BER','CPH','gray',2,0,1],
+  ['BER','WAR','yellow',3],['BER','WIE','white',3],['CPH','STO','black',3],['STO','RIG','gray',3,0,1],['WAR','RIG','blue',4],
+  ['RIG','MOS','purple',4],['WAR','KYI','gray',4],['KYI','MOS','red',4],['WAR','WIE','red',3],['KYI','BUD','gray',4,1],
+  ['KYI','BUC','white',4],['WIE','BUD','red',1],['WIE','ZAG','gray',2],['VEN','ZAG','gray',2],['VEN','ROM','black',2],
+  ['ROM','BRI','white',2],['BRI','ATH','gray',3,0,1],['ZAG','BUD','orange',2],['ZAG','SOF','gray',4,1],['BUD','BUC','gray',4,1],
+  ['BUC','SOF','gray',2,1],['SOF','ATH','green',3],['SOF','IST','blue',3],['BUC','IST','yellow',3],['ATH','IST','gray',2,0,1]
+];
+const C={};for(const [id,[n,lo,la,l]] of Object.entries(CITY_DATA)){const [x,y]=proj(lo,la);C[id]={n,x,y,l}}
+const IDS=Object.keys(C);
+const ROUTES=RDATA.map(([a,b,color,len,tunnel=0,ferry=0],i)=>({i,a,b,color,len,tunnel:!!tunnel,ferry}));
+const ADJ={};IDS.forEach(c=>ADJ[c]=[]);ROUTES.forEach(r=>{ADJ[r.a].push(r.i);ADJ[r.b].push(r.i)});
+
+const shape=pts=>'M'+pts.map(([lo,la])=>proj(lo,la).join(',')).join('L')+'Z';
+const LANDS=[
+ [[21.4,62.2],[42.5,62.2],[42.5,34.5],[35.9,34.5],[35.9,36],[36.1,36.8],[34.6,36.8],[32.5,36.1],[30.6,36.8],[28.2,36.7],[27.3,37.5],[26.3,38.3],[26.7,39.4],[26.2,40.1],[26,40.6],[24.5,40.9],[23.7,40.3],[22.8,40.5],[22.9,39.4],[23.3,38.9],[24.1,38.2],[24,37.65],[23.4,37.9],[23.2,36.4],[22.5,36.4],[21.7,36.8],[21.1,37.8],[21.6,38.3],[20.7,39],[20,39.7],[19.4,40.4],[19.5,41.8],[18.5,42.5],[17,43.3],[15.9,43.6],[14.5,45.2],[13.7,45.7],[12.4,45.5],[12.3,44.4],[13.5,43.6],[14.2,42.4],[16,41.9],[16.9,41.1],[18.5,40.1],[18.4,39.8],[17.2,40.4],[16.6,39.7],[17.1,39],[16.5,38.4],[15.65,38],[15.8,38.8],[15.6,40.1],[14.3,40.7],[13,41.3],[12.3,41.7],[11,42.5],[10.3,43.5],[9.8,44.1],[8.8,44.4],[7.5,43.8],[6.6,43.2],[5.4,43.2],[4,43.5],[3.1,43.1],[3.2,42.3],[2.2,41.4],[0.9,41],[-0.3,39.5],[0.2,38.8],[-0.7,37.6],[-2.1,36.7],[-4.4,36.7],[-5.6,36],[-6.3,36.5],[-7.4,37.2],[-8.9,37],[-8.8,38.5],[-9.5,38.8],[-8.9,40.2],[-8.7,42],[-9.3,43],[-8,43.7],[-5.8,43.6],[-3.8,43.4],[-1.8,43.4],[-1.2,44.6],[-1.2,46.2],[-2.2,47.1],[-4.5,47.9],[-4.7,48.4],[-3,48.8],[-1.6,48.7],[-1.9,49.7],[-1.2,49.4],[0.1,49.4],[1.5,50.2],[2.5,51.1],[3.6,51.4],[4.2,52],[4.7,52.9],[5.4,53.3],[7,53.5],[8.6,53.9],[8.6,55],[8.1,56.5],[10.6,57.7],[10.4,56.5],[12.6,56],[12.5,55.4],[12.1,54.9],[10.9,54.4],[11.5,54.1],[13.8,54.6],[14.3,53.9],[16.5,54.5],[18.6,54.7],[19.8,54.4],[21.1,55.7],[21,56.8],[21.6,57.5],[22.6,57.7],[23.9,57],[24.3,57.8],[23.5,58.6],[23.4,59.2],[24.8,59.5],[28,59.5],[30.2,59.9],[29,60.2],[26.9,60.4],[24.9,60.15],[22.9,59.8],[21.4,60.6]],
+ [[4.9,62.2],[4.9,61],[5,60],[5.5,59],[5.7,58.4],[7,58],[8.5,58.3],[10,59],[10.7,59.6],[11.2,59],[11.8,58.4],[11.9,57.7],[12.6,56.4],[12.9,55.6],[14.3,55.5],[14.7,56.2],[16.4,56.6],[16.8,58],[18.4,59.2],[18.9,59.9],[17.3,60.7],[17.2,62.2]],
+ [[-5.7,50.1],[-3.5,50.3],[-1,50.7],[1.4,51.1],[0.9,51.6],[1.7,52.6],[0.3,53.4],[-0.1,54.2],[-1.2,54.6],[-1.6,55.6],[-2.5,56],[-2.1,57.1],[-1.8,57.6],[-3.8,57.7],[-3.1,58.6],[-5,58.6],[-5.7,57.5],[-5.7,56.3],[-5,55.8],[-4.9,54.9],[-3.2,54.9],[-3,53.4],[-4.6,53.3],[-4.1,52.4],[-5.2,51.8],[-3.2,51.5],[-4.2,51.1]],
+ [[-6,52.2],[-6.1,53.3],[-5.9,54.2],[-6,55.2],[-7.3,55.4],[-8.3,55.1],[-8.6,54.3],[-10,54.2],[-9.9,53.4],[-9.4,52.6],[-10.3,52.1],[-9.8,51.6],[-8.2,51.8]],
+ [[-6.6,34.5],[-6,35.5],[-5.9,35.8],[-5.3,35.9],[-4,35.2],[-2,35.1],[0,35.9],[3,36.8],[6.5,37.1],[8.6,36.9],[9.8,37.3],[11,37],[10.6,36.4],[10.9,35.5],[10.8,34.5]],
+ [[12.4,38.1],[13.3,38.2],[15.6,38.3],[15.1,37.3],[15.1,36.7],[14.3,37],[12.6,37.6]],
+ [[8.4,39],[8.2,40.9],[9.2,41.2],[9.8,40.9],[9.6,39.2],[9.1,39.2]],
+ [[8.6,42.6],[9.4,43],[9.6,42.2],[9.2,41.4],[8.6,41.8]],
+ [[23.5,35.5],[24.8,35.4],[26.3,35.25],[25.5,35],[24,35.2]]
+].map(shape);
+const BLACKSEA=shape([[28.1,41.4],[28,43.2],[28.6,44.2],[29.7,45.2],[30.7,46.5],[32,46.5],[33.5,46],[32.5,45.4],[33.6,44.5],[35.5,45],[36.6,45.4],[38.5,44.5],[39.8,43.6],[41.6,41.6],[40.5,41],[38,40.9],[36,41.7],[35,42],[33,42],[31,41.2],[29.2,41.2]]);
+
+/* ===== helpers ===== */
+const rand=n=>Math.floor(Math.random()*n);
+const pick=a=>a[rand(a.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+const nm=id=>C[id].n;
+const $=id=>document.getElementById(id);
+function dijkstra(list,a,b,cost){
+  const dist={},prev={},done=new Set();IDS.forEach(c=>dist[c]=Infinity);dist[a]=0;
+  for(;;){
+    let u=null;for(const c of IDS)if(!done.has(c)&&dist[c]<Infinity&&(u===null||dist[c]<dist[u]))u=c;
+    if(u===null)return null;if(u===b)break;done.add(u);
+    for(const ri of ADJ[u]){const r=list[ri],w=cost(r);if(w===Infinity)continue;const v=r.a===u?r.b:r.a;if(dist[u]+w<dist[v]){dist[v]=dist[u]+w;prev[v]=ri}}
+  }
+  const edges=[];let c=b;while(c!==a){const ri=prev[c];edges.push(ri);const r=list[ri];c=r.a===c?r.b:r.a}
+  return{cost:dist[b],edges};
+}
+const tval=(a,b,long)=>Math.round(dijkstra(ROUTES,a,b,r=>r.len).cost)+(long?3:0);
+const LONG=[['EDI','ATH'],['LIS','STO'],['LON','IST'],['BCN','MOS']].map(([a,b])=>({a,b,p:tval(a,b,1),long:true}));
+const SHORT=[['PAR','WIE'],['AMS','ROM'],['MAD','ZUR'],['LON','BER'],['BER','ROM'],['CPH','BUD'],['FRA','SOF'],['ZUR','BUD'],['VEN','IST'],['RIG','BUC'],['STO','BER'],['MUN','ATH'],['BCN','MUN'],['KYI','SOF'],['WAR','ATH'],['LON','ZUR'],['EDI','PAR'],['PAR','ROM'],['AMS','WIE'],['BER','KYI'],['LIS','MRS'],['MAD','AMS'],['ZAG','MOS'],['BRI','BUD'],['CPH','WAR'],['MRS','VEN'],['FRA','RIG'],['ROM','SOF']].map(([a,b])=>({a,b,p:tval(a,b,0)}));
+
+function edgesConnected(edges,a,b){
+  const adj={};edges.forEach(r=>{(adj[r.a]=adj[r.a]||[]).push(r.b);(adj[r.b]=adj[r.b]||[]).push(r.a)});
+  const seen=new Set([a]),q=[a];
+  while(q.length){const x=q.shift();if(x===b)return true;(adj[x]||[]).forEach(y=>{if(!seen.has(y)){seen.add(y);q.push(y)}})}
+  return false;
+}
+
+const CAR_SVG='<svg viewBox="0 0 30 20" aria-hidden="true"><rect x="2" y="3" width="26" height="11" rx="3" fill="rgba(255,255,255,.88)" stroke="#1c1d33" stroke-width="1.8"/><rect x="6" y="6" width="6" height="4" rx="1" fill="#1c1d33"/><rect x="17" y="6" width="6" height="4" rx="1" fill="#1c1d33"/><circle cx="9" cy="16.5" r="2.5" fill="#1c1d33"/><circle cx="21" cy="16.5" r="2.5" fill="#1c1d33"/></svg>';
+const LOCO_SVG='<svg viewBox="0 0 30 20" aria-hidden="true"><rect x="5" y="1" width="4" height="5" rx="1" fill="#1c1d33"/><rect x="2" y="5" width="16" height="9" rx="3" fill="#fff" stroke="#1c1d33" stroke-width="1.8"/><rect x="17" y="2" width="11" height="12" rx="2" fill="#fff" stroke="#1c1d33" stroke-width="1.8"/><rect x="20" y="5" width="5" height="4" rx="1" fill="#1c1d33"/><circle cx="7" cy="16.5" r="2.5" fill="#1c1d33"/><circle cx="15" cy="16.5" r="2.5" fill="#1c1d33"/><circle cx="23" cy="16.5" r="2.5" fill="#1c1d33"/></svg>';
+function cardHTML(c,extra='',cls=''){return `<span class="cardface ${c==='loco'?'loco':''} ${cls}" style="${c==='loco'?'':'--c:'+HEX[c]}">${c==='loco'?LOCO_SVG:CAR_SVG}<span class="cl">${c==='loco'?'loco':c}</span>${extra}</span>`}
+function sprocketInner(col){return `<line x1="0" y1="-8" x2="1.5" y2="-13" stroke="#1c1d33" stroke-width="1.8"/><circle cx="1.8" cy="-13.8" r="2.2" fill="${col}" stroke="#1c1d33" stroke-width="1.4"/><rect x="-6" y="6.5" width="4" height="4.4" rx="1" fill="#1c1d33"/><rect x="2" y="6.5" width="4" height="4.4" rx="1" fill="#1c1d33"/><polygon points="9,0 4.5,7.8 -4.5,7.8 -9,0 -4.5,-7.8 4.5,-7.8" fill="${col}" stroke="#1c1d33" stroke-width="1.9" stroke-linejoin="round"/><circle cx="0" cy="-0.5" r="4.3" fill="#fff" stroke="#1c1d33" stroke-width="1.4"/><circle cx="1.3" cy="-0.5" r="2" fill="#1c1d33"/>`}
+const sprocket=col=>`<svg viewBox="-11 -17 22 29" aria-hidden="true">${sprocketInner(col)}</svg>`;
+const sw=c=>`<span class="sw ${c==='loco'?'swloco':''}" style="${c==='loco'?'':'background:'+HEX[c]}"></span>`;
+function payLabel(o){const p=[];if(o.n)p.push(`${sw(o.c)}${o.n} ${o.c}`);if(o.w)p.push(`${sw('loco')}${o.w} loco${o.w>1?'s':''}`);return p.join('<span class="plus">+</span>')}
+
+/* ===== state ===== */
+const PLAYERS=[
+  {id:0,name:'You',col:'#14b8a6',human:true},{id:1,name:'Rose',col:'#ff4fa3'},
+  {id:2,name:'Sandy',col:'#c8894a'},{id:3,name:'Mint',col:'#9be15d'}
+];
+let S=null;const H=()=>S.players[0];
+
+function newGame(trains,silent){
+  const deck=[];COLS.forEach(c=>{for(let i=0;i<12;i++)deck.push(c)});for(let i=0;i<14;i++)deck.push('loco');
+  shuffle(deck);
+  const longs=shuffle(LONG.map(t=>({...t}))),shorts=shuffle(SHORT.map(t=>({...t})));
+  S={deck,discard:[],market:[],ticketDeck:[],turn:0,round:1,drawn:0,busy:false,over:false,locked:!!silent,lastTurns:null,
+     selected:null,stationAt:{},log:[],startTrains:trains,
+     routes:ROUTES.map(r=>({...r,owner:null})),
+     players:PLAYERS.map(p=>({...p,hand:{},trains,stations:3,tickets:[]}))};
+  S.players.forEach(p=>{for(let k=0;k<4;k++)give(p,draw())});
+  for(let k=0;k<5;k++)S.market.push(draw());fixMarket(true);
+  const offers=S.players.map(()=>[longs.pop(),shorts.pop(),shorts.pop(),shorts.pop()]);
+  S.ticketDeck=shorts;
+  for(let i=1;i<4;i++){
+    const o=offers[i].map(t=>({t,c:dijkstra(ROUTES,t.a,t.b,r=>r.len).cost})).sort((x,y)=>x.c-y.c);
+    S.players[i].tickets=[o[0].t,o[1].t];o.slice(2).forEach(x=>{if(!x.t.long)S.ticketDeck.push(x.t)});
+  }
+  addLog(`New game with ${trains} trains each. Choose your destination tickets.`);
+  render();
+  if(!silent)offerTickets(offers[0],2,true);
+}
+function draw(){if(!S.deck.length){S.deck=shuffle(S.discard);S.discard=[]}return S.deck.pop()||null}
+function give(p,c){if(c)p.hand[c]=(p.hand[c]||0)+1}
+function addLog(t,k=''){S.log.unshift({t,k});S.log=S.log.slice(0,40)}
+function fixMarket(quiet){
+  for(let i=0;i<5;i++)if(!S.market[i])S.market[i]=draw();
+  let t=0;
+  while(S.market.filter(c=>c==='loco').length>=3&&t<3){
+    S.discard.push(...S.market.filter(Boolean));S.market=[0,1,2,3,4].map(()=>draw());t++;
+    if(!quiet)addLog('Three locomotives were face up, so the market was redealt.');
+  }
+}
+const canAct=()=>S&&!S.busy&&!S.over&&!S.locked&&S.turn===0;
+const routePts=pid=>S.routes.filter(r=>r.owner===pid).reduce((s,r)=>s+PTS[r.len],0);
+
+/* ===== payment ===== */
+function payOptions(p,r){
+  if(p.trains<r.len)return[];
+  const L=p.hand.loco||0,opts=[];
+  for(const c of(r.color==='gray'?COLS:[r.color])){
+    const have=p.hand[c]||0,n=Math.min(have,r.len-r.ferry),w=r.len-n;
+    if(n>0&&L>=w)opts.push({c,n,w});
+  }
+  if(L>=r.len)opts.push({c:'loco',n:0,w:r.len});
+  return opts.sort((a,b)=>a.w-b.w||b.n-a.n);
+}
+function payPlan(p,o){
+  if(o.n){p.hand[o.c]-=o.n;for(let i=0;i<o.n;i++)S.discard.push(o.c)}
+  if(o.w){p.hand.loco-=o.w;for(let i=0;i<o.w;i++)S.discard.push('loco')}
+}
+const tunnelExtra=(o,rev)=>rev.filter(x=>x==='loco'||(o.c!=='loco'&&x===o.c)).length;
+function extraPlan(p,o,extra){
+  if(!extra)return{c:o.c,n:0,w:0};
+  const hc=o.c==='loco'?0:(p.hand[o.c]||0)-o.n,hl=(p.hand.loco||0)-o.w;
+  if(hc+hl<extra)return null;const n=Math.min(hc,extra);return{c:o.c,n,w:extra-n};
+}
+function claim(p,r){
+  r.owner=p.id;p.trains-=r.len;
+  addLog(`${p.human?'You':p.name} claimed ${nm(r.a)} to ${nm(r.b)} for ${PTS[r.len]} pts.`,p.human?'good':'');
+}
+function stationOptions(p,k){
+  const L=p.hand.loco||0,o=[];
+  COLS.forEach(c=>{const h=p.hand[c]||0;if(h>0&&h+L>=k){const n=Math.min(h,k);o.push({c,n,w:k-n})}});
+  if(L>=k)o.push({c:'loco',n:0,w:k});
+  return o.sort((a,b)=>a.w-b.w);
+}
+
+/* ===== turn flow ===== */
+function endTurn(){
+  if(S.over)return;
+  const p=S.players[S.turn];
+  if(S.lastTurns===null&&(p.trains<=2||S.routes.every(r=>r.owner!==null))){S.lastTurns=S.players.length+1;addLog(p.trains<=2?`${p.human?'You have':p.name+' has'} ${p.trains} trains left. Everyone gets one final turn.`:'Every route is taken. Everyone gets one final turn.','danger')}
+  if(S.lastTurns!==null){S.lastTurns--;if(S.lastTurns<=0){endGame();return}}
+  S.turn=(S.turn+1)%S.players.length;S.drawn=0;S.selected=null;
+  if(S.turn===0){S.round++;if(S.round>60){endGame();return}}
+  const q=S.players[S.turn];
+  if(q.human){S.busy=false;render();return}
+  S.busy=true;render();
+  setTimeout(()=>{if(S.over)return;botTurn(q);render();endTurn()},650);
+}
+
+/* ===== human actions ===== */
+function takeMarket(i){
+  if(!canAct())return;const c=S.market[i];if(!c)return;
+  if(c==='loco'&&S.drawn===1)return;
+  give(H(),c);S.market[i]=draw();fixMarket();
+  addLog(`You took ${c==='loco'?'a face-up locomotive':'a '+c+' card'}.`);
+  if(c==='loco'){endTurn();return}
+  S.drawn++;afterDraw();
+}
+function takeDeck(){
+  if(!canAct())return;const c=draw();if(!c)return;give(H(),c);
+  addLog(`You drew ${c==='loco'?'a locomotive':'a '+c+' card'} from the deck.`);
+  S.drawn++;afterDraw();
+}
+function afterDraw(){
+  if(S.drawn>=2)return endTurn();
+  if(!(S.deck.length+S.discard.length)&&!S.market.some(c=>c&&c!=='loco')){addLog('No cards left to draw.');return endTurn()}
+  render();
+}
+function startClaim(ri,o){
+  const r=S.routes[ri],p=H();
+  if(!r.tunnel){payPlan(p,o);claim(p,r);closeSheet(true);endTurn();return}
+  const rev=[draw(),draw(),draw()].filter(Boolean);S.discard.push(...rev);
+  const extra=tunnelExtra(o,rev),ex=extraPlan(p,o,extra);
+  S.pending={ri,o,extra,ex};S.locked=true;
+  const cards=rev.map(c=>cardHTML(c,'',(c==='loco'||(o.c!=='loco'&&c===o.c))?'hitc':'')).join('');
+  let body;
+  if(!extra)body=`<p>None of the flipped cards match. The tunnel is clear.</p><button class="btn primary full" data-tunnel="go">Build the route</button>`;
+  else if(ex)body=`<p>${extra} card${extra>1?'s':''} matched, so this tunnel costs ${extra} more.</p><button class="btn primary full" data-tunnel="go">Pay ${payLabel(ex)}</button><button class="btn full" data-tunnel="back">Back off and keep your cards</button>`;
+  else body=`<p>${extra} card${extra>1?'s':''} matched, and you can’t cover the extra cost. Your cards go back in your hand and your turn ends.</p><button class="btn full" data-tunnel="back">Back off</button>`;
+  sheet(`<div class="kicker">Tunnel: ${nm(r.a)} to ${nm(r.b)}</div><h3>Flipping 3 cards</h3><div class="reveal">${cards}</div>${body}`);
+}
+function tunnelResolve(go){
+  const{ri,o,extra,ex}=S.pending,p=H(),r=S.routes[ri];
+  if(go&&(ex||!extra)){payPlan(p,o);if(extra)payPlan(p,ex);claim(p,r)}
+  else addLog(`You backed off the ${nm(r.a)} to ${nm(r.b)} tunnel.`);
+  S.pending=null;S.locked=false;closeSheet(true);endTurn();
+}
+function buildStation(j){
+  const o=S.cityOpts[j],p=H(),id=S.curCity;if(!o||!canAct())return;
+  payPlan(p,o);S.stationAt[id]=0;p.stations--;
+  addLog(`You built a station in ${nm(id)}.`,'good');closeSheet(true);endTurn();
+}
+function offerTickets(list,min,initial){
+  S.offer={list,min,initial,keep:new Set()};S.locked=true;renderTicketChoice();
+}
+function renderTicketChoice(){
+  const{list,min,keep,initial}=S.offer;
+  sheet(`<div class="kicker">${initial?'Starting tickets':'New tickets'}</div><h3>Keep at least ${min}</h3>
+  <p>Connect both cities on a ticket by the end of the game to score it. Unfinished tickets count against you.</p>
+  <div class="tkchoice">${list.map((t,i)=>`<button class="btn ${keep.has(i)?'sel':''}" data-tk="${i}" aria-pressed="${keep.has(i)}"><span>${keep.has(i)?'✓ ':''}${nm(t.a)} to ${nm(t.b)}${t.long?'<span class="tag">Long</span>':''}</span><span class="fd">${t.p}</span></button>`).join('')}</div>
+  <button class="btn primary full" data-keep ${keep.size<min?'disabled':''}>Keep ${keep.size||''} ticket${keep.size===1?'':'s'}</button>`);
+}
+function confirmTickets(){
+  const{list,min,keep,initial}=S.offer;if(keep.size<min)return;
+  list.forEach((t,i)=>{if(keep.has(i))H().tickets.push(t);else if(!t.long)S.ticketDeck.push(t)});
+  addLog(`You kept ${keep.size} ticket${keep.size>1?'s':''}.`);
+  S.offer=null;S.locked=false;closeSheet(true);
+  if(initial){S.busy=false;render()}else endTurn();
+}
+function drawTicketsHuman(){
+  if(!canAct()||S.drawn||!S.ticketDeck.length)return;
+  offerTickets(S.ticketDeck.splice(0,3),1,false);
+}
+
+/* ===== bots ===== */
+function wanted(p){
+  const want=new Map(),own=S.routes.filter(r=>r.owner===p.id);
+  p.tickets.forEach(t=>{
+    if(edgesConnected(own,t.a,t.b))return;
+    const path=dijkstra(S.routes,t.a,t.b,r=>r.owner===p.id?0:r.owner===null?r.len+(r.tunnel?.6:0)+r.ferry*.6:Infinity);
+    if(!path)return;
+    path.edges.forEach(ri=>{if(S.routes[ri].owner===null)want.set(ri,(want.get(ri)||0)+t.p)});
+  });
+  return want;
+}
+function botTurn(p){
+  const want=wanted(p);let best=null;
+  for(const[ri,pr]of want){
+    const r=S.routes[ri],o=payOptions(p,r)[0];if(!o)continue;
+    const sc=r.len*2+pr*.3-o.w*1.5;if(!best||sc>best.sc)best={r,o,sc};
+  }
+  if(best)return botClaim(p,best.r,best.o);
+  const hc=Object.values(p.hand).reduce((a,b)=>a+b,0);
+  if(hc>=9){
+    const mine=new Set();S.routes.forEach(r=>{if(r.owner===p.id){mine.add(r.a);mine.add(r.b)}});
+    let alt=null;
+    S.routes.forEach(r=>{if(r.owner!==null)return;const o=payOptions(p,r)[0];if(!o||p.trains-r.len<0)return;
+      const sc=r.len+((mine.has(r.a)||mine.has(r.b))?2:0)-o.w*1.5;if(!alt||sc>alt.sc)alt={r,o,sc}});
+    if(alt&&alt.r.len>=2)return botClaim(p,alt.r,alt.o);
+  }
+  if(!want.size){
+    if(p.trains>=12&&S.ticketDeck.length&&p.tickets.length<5)return botTickets(p);
+    let any=null;
+    S.routes.forEach(r=>{if(r.owner!==null)return;const o=payOptions(p,r)[0];if(o&&(!any||r.len>any.r.len))any={r,o}});
+    if(any&&(any.r.len>=2||p.trains<=4))return botClaim(p,any.r,any.o);
+  }
+  botDraw(p,want);
+}
+function botClaim(p,r,o){
+  if(r.tunnel){
+    const rev=[draw(),draw(),draw()].filter(Boolean);S.discard.push(...rev);
+    const extra=tunnelExtra(o,rev),ex=extraPlan(p,o,extra);
+    if(!ex){addLog(`${p.name} tried the ${nm(r.a)} to ${nm(r.b)} tunnel and backed off.`);return}
+    payPlan(p,o);if(extra)payPlan(p,ex);
+  }else payPlan(p,o);
+  claim(p,r);
+}
+function botTickets(p){
+  const offer=S.ticketDeck.splice(0,3);
+  const sc=offer.map(t=>{const d=dijkstra(S.routes,t.a,t.b,r=>r.owner===p.id?0:r.owner===null?r.len:Infinity);return{t,c:d?d.cost:99}}).sort((a,b)=>a.c-b.c);
+  p.tickets.push(sc[0].t);
+  sc.slice(1).forEach(x=>{if(x.c<=Math.min(4,p.trains-sc[0].c-2))p.tickets.push(x.t);else S.ticketDeck.push(x.t)});
+  addLog(`${p.name} drew destination tickets.`);
+}
+function botDraw(p,want){
+  const need={};let mostC=null,mostN=-1;
+  COLS.forEach(c=>{if((p.hand[c]||0)>mostN){mostN=p.hand[c]||0;mostC=c}});
+  for(const ri of want.keys()){const r=S.routes[ri],c=r.color==='gray'?mostC:r.color;need[c]=(need[c]||0)+r.len-(p.hand[c]||0)}
+  if(Math.random()<.22){const li=S.market.indexOf('loco');if(li>=0){give(p,'loco');S.market[li]=draw();fixMarket();addLog(`${p.name} took a face-up locomotive.`);return}}
+  for(let k=0;k<2;k++){
+    let idx=-1,bv=0;S.market.forEach((c,i)=>{if(c&&c!=='loco'&&(need[c]||0)>bv){bv=need[c];idx=i}});
+    if(idx>=0){const c=S.market[idx];give(p,c);S.market[idx]=draw();fixMarket();need[c]--}
+    else{const c=draw();if(c)give(p,c);else{const j=S.market.findIndex(x=>x&&x!=='loco');if(j>=0){give(p,S.market[j]);S.market[j]=draw()}}}
+  }
+  addLog(`${p.name} drew 2 cards.`);
+}
+
+/* ===== scoring ===== */
+function ticketScore(p){
+  const own=S.routes.filter(r=>r.owner===p.id);
+  const st=IDS.filter(c=>S.stationAt[c]===p.id);
+  const ch=st.map(c=>[null,...ADJ[c].map(i=>S.routes[i]).filter(r=>r.owner!==null&&r.owner!==p.id)]);
+  let best=null;
+  (function rec(k,extra){
+    if(k===ch.length){let s=0;const det=p.tickets.map(t=>{const ok=edgesConnected(own.concat(extra),t.a,t.b);s+=ok?t.p:-t.p;return ok});if(!best||s>best.s)best={s,det};return}
+    for(const r of ch[k])rec(k+1,r?extra.concat([r]):extra);
+  })(0,[]);
+  return best;
+}
+function longest(pid){
+  const es=S.routes.filter(r=>r.owner===pid),adj={};let best=0;
+  es.forEach((e,i)=>{(adj[e.a]=adj[e.a]||[]).push(i);(adj[e.b]=adj[e.b]||[]).push(i)});
+  const used=es.map(()=>false);
+  const dfs=(c,l)=>{if(l>best)best=l;for(const i of adj[c]||[]){if(used[i])continue;used[i]=true;dfs(es[i].a===c?es[i].b:es[i].a,l+es[i].len);used[i]=false}};
+  Object.keys(adj).forEach(c=>dfs(c,0));return best;
+}
+function endGame(){
+  S.over=true;S.busy=false;S.locked=false;
+  const lens=S.players.map(p=>longest(p.id)),maxL=Math.max(...lens);
+  const rows=S.players.map((p,k)=>{const rp=routePts(p.id),tp=ticketScore(p).s,st=p.stations*4,ex=(maxL>0&&lens[k]===maxL)?10:0;return{p,rp,tp,st,ex,total:rp+tp+st+ex,len:lens[k]}}).sort((a,b)=>b.total-a.total);
+  const w=rows[0].p,ex=rows.filter(r=>r.ex).map(r=>r.p.human?'you':r.p.name);
+  addLog(`Game over. ${w.human?'You win':w.name+' wins'} with ${rows[0].total} pts.`,'good');render();
+  sheet(`<div class="kicker">Final scores</div><h3>${w.human?'You win!':w.name+' wins'}</h3>
+  <p>Longest continuous route: ${maxL} trains, held by ${ex.join(' and ')} for +10.</p>
+  <table class="score"><tr><th>Player</th><th>Routes</th><th>Tickets</th><th>Stations</th><th>Longest</th><th>Total</th></tr>
+  ${rows.map(r=>`<tr><td><span class="who">${sprocket(r.p.col)}${r.p.name}</span></td><td>${r.rp}</td><td>${r.tp>0?'+':''}${r.tp}</td><td>+${r.st}</td><td>${r.ex?'+10':'0'}</td><td class="tot">${r.total}</td></tr>`).join('')}
+  </table>
+  <div class="modes"><button class="btn primary" data-new="20">Quick game<small>20 trains each</small></button><button class="btn" data-new="30">Long game<small>30 trains each</small></button></div>`);
+}
+
+/* ===== sheets ===== */
+const sheetEl=$('sheet'),sheetBody=$('sheetBody');
+function sheet(html){sheetBody.innerHTML=html;sheetEl.classList.remove('hidden');sheetBody.scrollTop=0}
+function closeSheet(force){
+  if(!force&&S&&S.locked)return;
+  sheetEl.classList.add('hidden');if(S&&S.selected!==null){S.selected=null;render()}
+}
+const note=t=>`<div class="note">${t}</div>`;
+const closeBtn=()=>`<button class="btn full" data-close>Close</button>`;
+function rulesHTML(){return `<ul>
+  <li><b>Draw 2 train cards</b> from the face-up market or the deck. A face-up locomotive counts as your whole draw and can’t be your second card.</li>
+  <li><b>Claim a route</b> by tapping it and paying cards that match its colour. Grey routes take any single colour. Locomotives are wild.</li>
+  <li><b>Ferries</b> have white dots on their cars. Each dot needs a locomotive.</li>
+  <li><b>Tunnels</b> have dashed outlines. After you pay, 3 cards flip from the deck. Each one that matches your colour, or is a locomotive, costs one more card. Pay it or back off.</li>
+  <li><b>Draw destination tickets</b>: take 3 and keep at least 1.</li>
+  <li><b>Build a station</b> by tapping a city. It lets you use one rival’s route into that city for your tickets. Stations cost 1, then 2, then 3 cards. Each one you don’t build is worth 4 points at the end.</li>
+  <li>When anyone drops to 2 trains or fewer, everyone gets one final turn. The longest continuous route earns +10.</li>
+  <li>Tap any city to read about its landmark. Cities you connect to get stamped in amber.</li>
+</ul>`}
+function openStart(){
+  sheet(`<div class="kicker">Four players, one continent</div><h3>Build the best railway in Europe</h3>${rulesHTML()}
+  <div class="modes"><button class="btn primary" data-new="20">Quick game<small>20 trains each, about 10 minutes</small></button><button class="btn" data-new="30">Long game<small>30 trains each, fills the map</small></button></div>`);
+}
+function openRoute(i){
+  S.selected=i;render();
+  const r=S.routes[i],p=H();
+  const kind=[r.tunnel?'Tunnel':'',r.ferry?`Ferry: needs ${r.ferry} locomotive${r.ferry>1?'s':''}`:''].filter(Boolean).join('. ');
+  let act='';
+  if(r.owner!==null)act=note(`Claimed by ${r.owner===0?'you':S.players[r.owner].name}.`);
+  else if(S.over)act=note('The game is over.');
+  else if(!canAct())act=note('Wait for your turn.');
+  else if(S.drawn)act=note('You’ve started drawing. Take one more card to finish your turn.');
+  else if(p.trains<r.len)act=note(`You only have ${p.trains} trains left.`);
+  else{
+    const opts=payOptions(p,r);S.routeOpts=opts;
+    act=opts.length?`<div class="kicker">Pay with</div><div class="payopts">${opts.map((o,k)=>`<button class="btn" data-pay="${k}">${payLabel(o)}</button>`).join('')}</div>${r.tunnel?'<p class="small">After you pay, 3 cards flip. Each match costs one more card.</p>':''}`
+      :note(`You need ${r.len} ${r.color==='gray'?'cards of one colour':r.color+' cards'}${r.ferry?`, including ${r.ferry} locomotive${r.ferry>1?'s':''}`:''}. Locomotives are wild.`);
+  }
+  sheet(`<div class="kicker">Route${kind?'. '+kind:''}</div><h3>${nm(r.a)} to ${nm(r.b)}</h3>
+  <p>${sw(r.color==='gray'?'gray':r.color)} ${r.len} ${r.color==='gray'?'grey (any one colour)':r.color} for ${PTS[r.len]} points</p>${act}${closeBtn()}`);
+}
+function openCity(id){
+  const c=C[id],[e,t,f]=INFO[id],p=H(),so=S.stationAt[id];
+  const stamped=S.routes.some(r=>r.owner===0&&(r.a===id||r.b===id));
+  let h=`<div class="postcard"><div class="pcE">${e}</div><div><div class="kicker">${c.n}${stamped?'<span class="stamp">Stamped</span>':''}</div><h3>${t}</h3></div></div><p>${f}</p>`;
+  if(so!==undefined)h+=note(`${so===0?'Your':S.players[so].name+'’s'} station stands here.`);
+  else if(canAct()&&!S.drawn&&p.stations>0){
+    const k=4-p.stations,opts=stationOptions(p,k);S.cityOpts=opts;S.curCity=id;
+    h+=`<div class="kicker">Build a station for ${k} card${k>1?'s':''} of one colour</div>`+(opts.length?`<div class="payopts">${opts.map((o,j)=>`<button class="btn" data-station="${j}">${payLabel(o)}</button>`).join('')}</div><p class="small">This uses your turn. You’ll be able to borrow one rival route into ${c.n} for your tickets.</p>`:note(`You need ${k} matching card${k>1?'s':''} to build here.`));
+  }
+  sheet(h+closeBtn());
+}
+
+sheetEl.addEventListener('click',e=>{
+  if(e.target===sheetEl)return closeSheet();
+  const b=e.target.closest('button');if(!b||b.disabled)return;
+  const d=b.dataset;
+  if('close'in d)closeSheet(true);
+  else if(d.pay!==undefined)startClaim(S.selected,S.routeOpts[+d.pay]);
+  else if(d.tunnel)tunnelResolve(d.tunnel==='go');
+  else if(d.station!==undefined)buildStation(+d.station);
+  else if(d.tk!==undefined){const k=S.offer.keep,i=+d.tk;k.has(i)?k.delete(i):k.add(i);renderTicketChoice()}
+  else if('keep'in d)confirmTickets();
+  else if(d.new){sheetEl.classList.add('hidden');newGame(+d.new)}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheetEl.classList.contains('hidden'))closeSheet()});
+$('map').addEventListener('click',e=>{
+  if(!S||S.locked)return;
+  const r=e.target.closest('[data-route]');if(r)return openRoute(+r.dataset.route);
+  const c=e.target.closest('[data-city]');if(c)return openCity(c.dataset.city);
+});
+$('map').addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const c=e.target.closest('[data-city]');if(c){e.preventDefault();openCity(c.dataset.city)}});
+$('market').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.m!==undefined)takeMarket(+b.dataset.m);else if('deck'in b.dataset)takeDeck()});
+$('tixBtn').onclick=drawTicketsHuman;
+$('helpBtn').onclick=()=>{if(S&&S.locked&&S.offer)return;sheet(`<h3>Rules</h3>${rulesHTML()}${closeBtn()}`)};
+$('zoomBtn').onclick=()=>{const w=$('mapwrap'),z=w.classList.toggle('zoomed');$('zoomBtn').textContent=z?'Zoom out':'Zoom in';const s=$('mapscroll');if(z){s.scrollLeft=(s.scrollWidth-s.clientWidth)*.45;s.scrollTop=0}};
+
+/* ===== render ===== */
+function render(){
+  if(!S)return;
+  $('logo').innerHTML=sprocket('#14b8a6');
+  $('roster').innerHTML=S.players.map(p=>{const hc=Object.values(p.hand).reduce((a,b)=>a+b,0);return `<div class="mate ${S.turn===p.id&&!S.over?'turn':''}">${sprocket(p.col)}<div class="nm">${p.name}</div><div class="meta">${p.trains} trains<br>${routePts(p.id)} pts, ${hc} cards</div></div>`}).join('');
+  const st=$('status'),fin=S.lastTurns!==null;
+  if(S.over){st.className='status wait';st.innerHTML='<span class="dot"></span>Game over.'}
+  else if(S.offer){st.className='status wait';st.innerHTML='<span class="dot"></span>Choose which tickets to keep.'}
+  else if(S.locked&&!S.pending){st.className='status wait';st.innerHTML='<span class="dot"></span>Pick a game length to start.'}
+  else if(S.busy){st.className='status wait';st.innerHTML=`<span class="dot"></span>${S.players[S.turn].name} is playing${fin?' their final turn':''}…`}
+  else{st.className='status'+(fin?' final':'');st.innerHTML=`<span class="dot"></span>${fin?'Your final turn. ':''}${S.drawn?'Take one more card. Face-up locomotives are off limits now.':'Your turn. Draw cards, tap a route to claim it, draw tickets, or tap a city to build a station.'}`}
+  renderMap();
+  const p=H();
+  $('trains').textContent=`${p.trains} trains, ${p.stations} stations left`;
+  const keys=[...COLS,'loco'].filter(c=>p.hand[c]>0);
+  $('hand').innerHTML=keys.length?keys.map(c=>cardHTML(c,`<span class="n">${p.hand[c]}</span>`)).join(''):'<span class="hint">No cards in hand.</span>';
+  const act=canAct(),left=S.deck.length+S.discard.length;
+  $('market').innerHTML=S.market.map((c,i)=>c?`<button class="mk" data-m="${i}" ${!act||(c==='loco'&&S.drawn)?'disabled':''} aria-label="Take ${c} card">${cardHTML(c)}</button>`:'<span class="cardface empty"></span>').join('')
+    +`<button class="mk" data-deck ${!act||!left?'disabled':''} aria-label="Draw from deck"><span class="cardface deck"><span class="cl">deck ${left}</span></span></button>`;
+  $('draws').textContent=act?`${2-S.drawn} draw${S.drawn?'':'s'} left`:'';
+  const tb=$('tixBtn');tb.disabled=!act||S.drawn>0||!S.ticketDeck.length;tb.textContent=`Draw destination tickets (${S.ticketDeck.length} left)`;
+  const det=p.tickets.length?ticketScore(p).det:[];
+  $('tickets').innerHTML=p.tickets.length?p.tickets.map((t,i)=>`<div class="ticket ${det[i]?'ok':''}"><span>${det[i]?'✓ ':''}${nm(t.a)} to ${nm(t.b)}${t.long?'<span class="tag">Long</span>':''}</span><span class="pts">${t.p}</span></div>`).join(''):'<span class="hint">No tickets yet.</span>';
+  const stamped=IDS.filter(id=>S.routes.some(r=>r.owner===0&&(r.a===id||r.b===id))).length;
+  $('cards').textContent=`${stamped} of ${IDS.length} cities stamped`;
+  $('log').innerHTML=S.log.slice(0,8).map(l=>`<li class="${l.k}">${l.t}</li>`).join('');
+}
+function renderMap(){
+  let s=`<defs><pattern id="waves" width="24" height="16" patternUnits="userSpaceOnUse"><path d="M3 9 q4 -4 8 0 t8 0" class="wavepath"/></pattern></defs>
+  <rect width="392" height="300" class="seafill"/><rect width="392" height="300" fill="url(#waves)"/>`;
+  LANDS.forEach(d=>s+=`<path d="${d}" class="land"/>`);
+  s+=`<path d="${BLACKSEA}" class="blacksea"/><path d="${BLACKSEA}" fill="url(#waves)"/>`;
+  S.routes.forEach(r=>{
+    const A=C[r.a],B=C[r.b],dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy),ux=dx/d,uy=dy/d,ang=(Math.atan2(dy,dx)*180/Math.PI).toFixed(1);
+    const sh=6.5,gap=1.5,w=(d-2*sh-gap*(r.len-1))/r.len,ln=`x1="${A.x+ux*sh}" y1="${A.y+uy*sh}" x2="${B.x-ux*sh}" y2="${B.y-uy*sh}"`;
+    if(S.selected===r.i)s+=`<line ${ln} class="selglow"/>`;
+    const own=r.owner!==null,fill=own?S.players[r.owner].col:HEX[r.color];
+    for(let k=0;k<r.len;k++){
+      const off=sh+k*(w+gap)+w/2,cx=(A.x+ux*off).toFixed(1),cy=(A.y+uy*off).toFixed(1);
+      s+=`<g transform="translate(${cx},${cy}) rotate(${ang})"><rect x="${(-w/2).toFixed(2)}" y="-3.4" width="${w.toFixed(2)}" height="6.8" rx="1.8" class="car${own?' own':''}${r.tunnel?' tun':''}" style="fill:${fill}"/>${!own&&k<r.ferry?'<circle r="1.7" class="locomark"/>':''}${own?'<rect x="-1.3" y="-1.3" width="2.6" height="2.6" rx=".6" class="win"/>':''}</g>`;
+    }
+    s+=`<line ${ln} class="hit" data-route="${r.i}"/>`;
+  });
+  IDS.forEach(id=>{
+    const c=C[id],so=S.stationAt[id],stamped=S.routes.some(r=>r.owner===0&&(r.a===id||r.b===id));
+    const lx=c.l==='l'?c.x-7:c.l==='r'?c.x+7:c.x,ly=c.l==='t'?c.y-7.5:c.l==='b'?c.y+12:c.y+2.7,anc=c.l==='l'?'end':c.l==='r'?'start':'middle';
+    s+=`<g class="city" data-city="${id}" tabindex="0" role="button" aria-label="${c.n}"><circle cx="${c.x}" cy="${c.y}" r="11" class="cityhit"/><circle cx="${c.x}" cy="${c.y}" r="4.4" class="node${stamped?' stamped':''}"/>${so!==undefined?`<path d="M${c.x+3} ${c.y-3} v-5 l3.2 -3.2 l3.2 3.2 v5 z" class="station" style="fill:${S.players[so].col}"/>`:''}<text x="${lx}" y="${ly}" text-anchor="${anc}" class="lbl">${c.n}</text></g>`;
+  });
+  $('map').innerHTML=s;
+}
+
+newGame(20,true);openStart();
+</script>
+</body>
+</html>

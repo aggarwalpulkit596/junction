@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Junction 3D: Europe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/*@@STYLE@@*/
+/* ===== 3D layout ===== */
+html,body{height:100%;overflow:hidden}
+body{background:#bfe4f6;user-select:none;-webkit-user-select:none}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+.hud{position:fixed;z-index:5}
+#hudTop{top:calc(8px + env(safe-area-inset-top,0px));left:8px;right:62px;max-width:560px;margin:0 auto}
+#hudTop .roster{margin-bottom:6px;gap:6px}
+#hudTop .mate{padding:4px 2px 5px;border-radius:12px}
+#hudTop .mate svg{width:18px;height:25px}
+#hudTop .mate .nm{font-size:13px}
+#hudTop .mate .meta{font-size:10.5px}
+#hudTop .status{font-size:13px;min-height:38px;padding:7px 11px;margin:0}
+#hudRight{top:calc(8px + env(safe-area-inset-top,0px));right:8px;display:flex;flex-direction:column;gap:8px}
+#hudRight .iconbtn{font-size:15px}
+#hudRight .iconbtn[aria-pressed="false"]{opacity:.5}
+#hudRight #ffBtn[aria-pressed="true"]{background:var(--accent);opacity:1}
+#hudLeft{top:calc(156px + env(safe-area-inset-top,0px));left:8px;width:172px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+#hudLeft>*{pointer-events:auto}
+.mini{padding:8px 9px 7px;margin:0}
+.mini .mh{font-family:'Fredoka';font-weight:600;font-size:14px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:baseline}
+.mini .mh small{font-family:'Nunito';font-weight:700;font-size:10.5px;color:var(--muted)}
+#hudLeft{width:196px}
+.mapmini{padding:5px}
+#minimap{width:100%;display:block;border-radius:10px;cursor:pointer;touch-action:none}
+.ticket[data-walkt]{cursor:pointer}
+.mkrow{display:flex;align-items:center;gap:7px;width:100%;background:none;border:0;padding:3px 3px;font-weight:800;font-size:13px;text-align:left;border-radius:8px}
+.mkrow:hover{background:var(--card)}
+.mkrow .d{margin-left:auto;color:var(--muted);font-size:11px;font-weight:700}
+#feed{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+#feed li{background:var(--panel);border:2px solid var(--outline);border-radius:10px;padding:5px 8px;font-size:12px;line-height:1.3;box-shadow:0 2px 0 var(--outline);animation:fadeout 7s forwards}
+#feed li.good{border-color:var(--good)}
+#feed li.danger{border-color:var(--danger)}
+@keyframes fadeout{0%,82%{opacity:1}100%{opacity:0}}
+#hudBottom{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:flex-end;justify-content:space-between;pointer-events:none}
+#hudBottom>*{pointer-events:auto}
+.handp{margin:0;max-width:430px;flex:0 1 430px;padding:9px 10px 10px}
+.handp .ph{margin-bottom:4px}
+.handp .cardface{width:38px;height:50px;border-radius:8px}
+.handp .cardface svg{width:24px;height:16px}
+.handp .cardface .cl{font-size:9px;line-height:13px}
+.handp .handrow{gap:10px}
+.actcol{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.actcol .row{display:flex;gap:8px}
+.actcol .btn{padding:9px 12px;font-size:13.5px}
+#chips{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+#chips .btn{padding:7px 11px;font-size:12.5px;background:var(--panel)}
+.use{width:98px;height:98px;border-radius:50%;border:3px solid var(--outline);background:var(--accent);color:var(--accentInk);box-shadow:0 5px 0 var(--outline);font-family:'Fredoka';font-weight:700;font-size:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:8px;line-height:1}
+.use small{font-family:'Nunito';font-weight:800;font-size:10.5px;line-height:1.15;max-width:82px;text-align:center}
+.use:disabled{opacity:.45;cursor:default}
+.use.go{animation:pulse 1.3s ease-in-out infinite}
+.use:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 var(--outline)}
+@keyframes pulse{50%{transform:scale(1.06)}}
+#postcard{bottom:calc(150px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:min(430px,calc(100% - 24px));background:var(--panel);border:2.5px solid var(--outline);border-radius:16px;padding:10px 12px;box-shadow:0 4px 0 var(--outline);pointer-events:none}
+#postcard .pt{display:flex;gap:10px;align-items:center}
+#postcard p{font-size:13px;margin-top:5px;line-height:1.35}
+#postcard h3{font-size:18px;line-height:1.1}
+#postcard .pcE{width:44px;height:44px;font-size:26px}
+#tixPanel{right:8px;bottom:calc(214px + env(safe-area-inset-bottom,0px));width:min(320px,calc(100% - 16px));margin:0;max-height:42vh;overflow:auto}
+#hint{left:50%;bottom:calc(122px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-size:12px;color:var(--ink);background:rgba(255,255,255,.75);border-radius:999px;padding:3px 10px;font-weight:700;pointer-events:none;white-space:nowrap}
+#boot{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:#bfe4f6;font-family:'Fredoka';font-size:22px;color:#1c1d33;text-align:center;padding:24px}
+.keys{display:inline-block;border:2px solid var(--outline);border-radius:6px;padding:0 5px;font-size:12px;font-weight:800;margin:0 1px}
+@media (max-width:640px){
+  #hudLeft{width:150px;top:calc(146px + env(safe-area-inset-top,0px))}
+  .mkrow{font-size:12px}
+  .handp{padding:7px 8px 8px}
+  .handp .cardface{width:32px;height:43px}
+  .handp .handrow{gap:8px}
+  .handp h2{font-size:14px}
+  .use{width:86px;height:86px;font-size:22px}
+  #hint{display:none}
+  #hudTop .status{font-size:12px;min-height:34px;padding:6px 9px}
+  #hudLeft{width:128px}
+  .mini{padding:6px 7px 5px}
+  .mini .mh{font-size:12.5px}
+  .mini .mh small{display:none}
+  .mkrow{font-size:11.5px;padding:2px}
+  .mkrow .sw{width:13px;height:13px}
+  #feed li:nth-child(n+2){display:none}
+  #feed li{font-size:11px}
+  .actcol .btn{padding:7px 9px;font-size:12px}
+  #postcard{top:calc(146px + env(safe-area-inset-top,0px));bottom:auto;left:auto;right:8px;transform:none;width:calc(100% - 152px);padding:7px 9px}
+  #postcard p{display:none}
+  #postcard h3{font-size:15px}
+  #postcard .pcE{width:36px;height:36px;font-size:20px}
+}
+</style>
+</head>
+<body>
+<canvas id="world" tabindex="0" aria-label="3D rail map of Europe. Walk your robot with WASD or arrow keys, or tap the ground."></canvas>
+<div id="hudTop" class="hud">
+  <div class="roster" id="roster"></div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+</div>
+<div id="hudRight" class="hud">
+  <button class="iconbtn" id="helpBtn" aria-label="Rules">?</button>
+  <button class="iconbtn" id="mapBtn" aria-label="Map view (M)" aria-pressed="false">Map</button>
+  <button class="iconbtn" id="sndBtn" aria-label="Sound effects" aria-pressed="true">🔊</button>
+  <button class="iconbtn" id="musBtn" aria-label="Music" aria-pressed="true">♪</button>
+  <button class="iconbtn" id="ffBtn" aria-label="Fast bots (F)" aria-pressed="false">⏩</button>
+  <button class="iconbtn" id="zin" aria-label="Zoom in">+</button>
+  <button class="iconbtn" id="zout" aria-label="Zoom out">−</button>
+</div>
+<div id="hudLeft" class="hud">
+  <div class="panel mini mapmini"><canvas id="minimap" width="784" height="600" aria-label="Minimap of Europe. Tap to walk there."></canvas></div>
+  <div class="panel mini"><div class="mh">Floating cards <small>tap to walk</small></div><div id="mkt"></div></div>
+  <ol id="feed" aria-live="polite"></ol>
+</div>
+<div id="postcard" class="hud" hidden></div>
+<div id="hint" class="hud">Walk: <span class="keys">W</span><span class="keys">A</span><span class="keys">S</span><span class="keys">D</span> or tap the ground · Use: <span class="keys">E</span> · Map: <span class="keys">M</span></div>
+<div id="tixPanel" class="hud panel" hidden><div class="ph"><h2>Your tickets</h2><span class="hint" id="cards"></span></div><div class="tix" id="tickets"></div></div>
+<div id="hudBottom" class="hud">
+  <section class="panel handp"><div class="ph"><h2>Your hand</h2><span class="hint" id="trains"></span></div><div class="handrow" id="hand"></div></section>
+  <div class="actcol">
+    <div id="chips"></div>
+    <div class="row"><button class="btn" id="mytixBtn" aria-expanded="false">Tickets</button><button class="btn" id="deckBtn">Deck</button></div>
+    <button class="btn" id="tixBtn">Draw tickets</button>
+    <button id="useBtn" class="use" disabled aria-label="Use"><span>USE</span><small id="useLbl"></small></button>
+  </div>
+</div>
+<div class="overlay hidden" id="sheet"><div class="sheet" id="sheetBody" role="dialog" aria-modal="true"></div></div>
+<div id="boot">Building Europe…</div>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
+
+/*@@DATA@@*/
+
+/* ===== state ===== */
+const PLAYERS=[
+  {id:0,name:'You',col:'#14b8a6',human:true},{id:1,name:'Rose',col:'#ff4fa3'},
+  {id:2,name:'Sandy',col:'#c8894a'},{id:3,name:'Mint',col:'#9be15d'}
+];
+let S=null;const H=()=>S.players[0];
+let GEN=0,FAST=false;
+const sleep=ms=>FAST?Promise.resolve():new Promise(r=>setTimeout(r,ms));
+
+function newGame(trains,silent){
+  GEN++;
+  const deck=[];COLS.forEach(c=>{for(let i=0;i<12;i++)deck.push(c)});for(let i=0;i<14;i++)deck.push('loco');
+  shuffle(deck);
+  const longs=shuffle(LONG.map(t=>({...t}))),shorts=shuffle(SHORT.map(t=>({...t})));
+  S={deck,discard:[],market:[],marketCity:[],ticketDeck:[],turn:0,round:1,drawn:0,busy:false,over:false,locked:!!silent,lastTurns:null,
+     selected:null,stationAt:{},log:[],startTrains:trains,
+     routes:ROUTES.map(r=>({...r,owner:null})),
+     players:PLAYERS.map(p=>({...p,hand:{},trains,stations:3,tickets:[]}))};
+  resetActors();
+  S.players.forEach(p=>{for(let k=0;k<4;k++)give(p,draw())});
+  for(let k=0;k<5;k++)setSlot(k,draw());fixMarket(true);
+  const offers=S.players.map(()=>[longs.pop(),shorts.pop(),shorts.pop(),shorts.pop()]);
+  S.ticketDeck=shorts;
+  for(let i=1;i<4;i++){
+    const o=offers[i].map(t=>({t,c:dijkstra(ROUTES,t.a,t.b,r=>r.len).cost})).sort((x,y)=>x.c-y.c);
+    S.players[i].tickets=[o[0].t,o[1].t];o.slice(2).forEach(x=>{if(!x.t.long)S.ticketDeck.push(x.t)});
+  }
+  $('feed').innerHTML='';
+  addLog(`New game with ${trains} trains each. Choose your destination tickets.`);
+  render();
+  if(!silent)offerTickets(offers[0],2,true);
+}
+function draw(){if(!S.deck.length){S.deck=shuffle(S.discard);S.discard=[]}return S.deck.pop()||null}
+function give(p,c){if(c)p.hand[c]=(p.hand[c]||0)+1}
+function addLog(t,k=''){
+  S.log.unshift({t,k});S.log=S.log.slice(0,40);
+  if(FAST)return;
+  const f=$('feed'),li=document.createElement('li');li.className=k;li.textContent=t;f.prepend(li);
+  while(f.children.length>4)f.lastChild.remove();
+  setTimeout(()=>li.remove(),7000);
+}
+/* face-up cards float above cities: each market slot has a card and a city */
+function setSlot(i,c){S.market[i]=c;S.marketCity[i]=c?pickCity(i):null}
+function pickCity(i){
+  const used=new Set(S.marketCity.filter((c,j)=>j!==i&&c));
+  let cands=IDS.filter(id=>!used.has(id));
+  const far=cands.filter(id=>ACT.every(A=>Math.hypot(A.x-WX(id),A.z-WZ(id))>10));
+  if(far.length)cands=far;
+  return pick(cands);
+}
+function fixMarket(quiet){
+  for(let i=0;i<5;i++)if(!S.market[i])setSlot(i,draw());
+  let t=0;
+  while(S.market.filter(c=>c==='loco').length>=3&&t<3){
+    S.discard.push(...S.market.filter(Boolean));for(let i=0;i<5;i++)setSlot(i,draw());t++;
+    if(!quiet)addLog('Three locomotives were floating at once, so all the cards were redealt.');
+  }
+}
+const canAct=()=>S&&!S.busy&&!S.over&&!S.locked&&S.turn===0;
+const routePts=pid=>S.routes.filter(r=>r.owner===pid).reduce((s,r)=>s+PTS[r.len],0);
+
+/*@@PAYMENT@@*/
+
+/* ===== turn flow (bots walk to where they act) ===== */
+async function endTurn(){
+  if(S.over)return;
+  const g=GEN,p=S.players[S.turn];
+  if(S.lastTurns===null&&(p.trains<=2||S.routes.every(r=>r.owner!==null))){S.lastTurns=S.players.length+1;SND.ready&&SND.fx.finalRound();addLog(p.trains<=2?`${p.human?'You have':p.name+' has'} ${p.trains} trains left. Everyone gets one final turn.`:'Every route is taken. Everyone gets one final turn.','danger')}
+  if(S.lastTurns!==null){S.lastTurns--;if(S.lastTurns<=0){endGame();return}}
+  S.turn=(S.turn+1)%S.players.length;S.drawn=0;S.selected=null;
+  if(S.turn===0){S.round++;if(S.round>60){endGame();return}}
+  const q=S.players[S.turn];
+  if(q.human){S.busy=false;render();SND.ready&&SND.fx.yourTurn();return}
+  S.busy=true;render();
+  await sleep(FF?60:200);
+  if(g!==GEN||S.over)return;
+  await botTurn(q);
+  if(g!==GEN||S.over)return;
+  render();
+  return endTurn();
+}
+
+/* ===== human actions ===== */
+function takeMarket(i){
+  if(!canAct())return;const c=S.market[i];if(!c)return;
+  if(c==='loco'&&S.drawn===1){addLog('A floating locomotive can’t be your second card.','danger');return}
+  const city=S.marketCity[i];
+  give(H(),c);fx.pickup(city,c);setSlot(i,draw());fixMarket();
+  addLog(`You took ${c==='loco'?'a floating locomotive':'a '+c+' card'} in ${nm(city)}.`);
+  if(c==='loco'){endTurn();return}
+  S.drawn++;afterDraw();
+}
+function takeDeck(){
+  if(!canAct())return;const c=draw();if(!c)return;give(H(),c);
+  addLog(`You drew ${c==='loco'?'a locomotive':'a '+c+' card'} from the deck.`);
+  S.drawn++;afterDraw();
+}
+/*@@HUMAN@@*/
+
+/* ===== bots ===== */
+/*@@WANTED@@*/
+async function botTurn(p){
+  const want=wanted(p);let best=null;
+  for(const[ri,pr]of want){
+    const r=S.routes[ri],o=payOptions(p,r)[0];if(!o)continue;
+    const sc=r.len*2+pr*.3-o.w*1.5;if(!best||sc>best.sc)best={r,o,sc};
+  }
+  if(best)return botClaim(p,best.r,best.o);
+  const hc=Object.values(p.hand).reduce((a,b)=>a+b,0);
+  if(hc>=9){
+    const mine=new Set();S.routes.forEach(r=>{if(r.owner===p.id){mine.add(r.a);mine.add(r.b)}});
+    let alt=null;
+    S.routes.forEach(r=>{if(r.owner!==null)return;const o=payOptions(p,r)[0];if(!o||p.trains-r.len<0)return;
+      const sc=r.len+((mine.has(r.a)||mine.has(r.b))?2:0)-o.w*1.5;if(!alt||sc>alt.sc)alt={r,o,sc}});
+    if(alt&&alt.r.len>=2)return botClaim(p,alt.r,alt.o);
+  }
+  if(!want.size){
+    if(p.trains>=12&&S.ticketDeck.length&&p.tickets.length<5)return botTickets(p);
+    let any=null;
+    S.routes.forEach(r=>{if(r.owner!==null)return;const o=payOptions(p,r)[0];if(o&&(!any||r.len>any.r.len))any={r,o}});
+    if(any&&(any.r.len>=2||p.trains<=4))return botClaim(p,any.r,any.o);
+  }
+  return botDraw(p,want);
+}
+async function botClaim(p,r,o){
+  const g=GEN;
+  await walkTo(p.id,...routeMid(r));
+  if(g!==GEN||S.over)return;
+  if(r.tunnel){
+    const rev=[draw(),draw(),draw()].filter(Boolean);S.discard.push(...rev);
+    const extra=tunnelExtra(o,rev),ex=extraPlan(p,o,extra);
+    if(!ex){addLog(`${p.name} tried the ${nm(r.a)} to ${nm(r.b)} tunnel and backed off.`);fx.puff(...routeMid(r));return}
+    payPlan(p,o);if(extra)payPlan(p,ex);
+  }else payPlan(p,o);
+  claim(p,r);fx.hop(p.id);
+}
+/*@@BOTTICKETS@@*/
+async function botDraw(p,want){
+  const g=GEN,need={};let mostC=null,mostN=-1;
+  COLS.forEach(c=>{if((p.hand[c]||0)>mostN){mostN=p.hand[c]||0;mostC=c}});
+  for(const ri of want.keys()){const r=S.routes[ri],c=r.color==='gray'?mostC:r.color;need[c]=(need[c]||0)+r.len-(p.hand[c]||0)}
+  if(Math.random()<.22){const li=S.market.indexOf('loco');if(li>=0){
+    await walkTo(p.id,...W(S.marketCity[li]));if(g!==GEN||S.over)return;
+    fx.pickup(S.marketCity[li],'loco');give(p,'loco');setSlot(li,draw());fixMarket();addLog(`${p.name} grabbed a floating locomotive.`);return}}
+  for(let k=0;k<2;k++){
+    let idx=-1,bv=0;S.market.forEach((c,i)=>{if(c&&c!=='loco'&&(need[c]||0)>bv){bv=need[c];idx=i}});
+    if(idx>=0){
+      await walkTo(p.id,...W(S.marketCity[idx]));if(g!==GEN||S.over)return;
+      const c=S.market[idx];fx.pickup(S.marketCity[idx],c);give(p,c);setSlot(idx,draw());fixMarket();need[c]--;render();
+    }
+    else{const c=draw();if(c)give(p,c);else{const j=S.market.findIndex(x=>x&&x!=='loco');if(j>=0){give(p,S.market[j]);setSlot(j,draw())}}}
+  }
+  addLog(`${p.name} drew 2 cards.`);
+}
+
+/*@@SCORING@@*/
+
+/*@@SHEETS@@*/
+function rulesHTML(){return `<ul>
+  <li><b>Find your way</b> with the minimap (top left): tap it to walk anywhere. Tap one of your tickets to head for it, or a floating card to fetch it.</li>
+  <li><b>Walk</b> your robot with <span class="keys">W</span><span class="keys">A</span><span class="keys">S</span><span class="keys">D</span> or the arrow keys, or tap the ground. You can walk on land and along the rail lines, so ferries and bridges are how you reach Britain and Scandinavia.</li>
+  <li><b>Use</b> (<span class="keys">E</span> or the big button) works on whatever you’re standing next to: a floating card, a route, or a city.</li>
+  <li><b>Draw 2 train cards</b>: walk to a floating card and take it, or draw from the deck anywhere. A floating locomotive counts as your whole draw and can’t be your second card.</li>
+  <li><b>Claim a route</b> by standing on it and paying cards that match its colour. Grey routes take any single colour. Locomotives are wild.</li>
+  <li><b>Ferries</b> have white dots on their cars. Each dot needs a locomotive.</li>
+  <li><b>Tunnels</b> have stone arches over their cars. After you pay, 3 cards flip from the deck. Each one that matches your colour, or is a locomotive, costs one more card. Pay it or back off.</li>
+  <li><b>Draw destination tickets</b> anywhere: take 3 and keep at least 1. Amber diamonds float over your ticket cities.</li>
+  <li><b>Build a station</b> in a city. It lets you use one rival’s route into that city for your tickets. Stations cost 1, then 2, then 3 cards. Each one you don’t build is worth 4 points at the end.</li>
+  <li>When anyone drops to 2 trains or fewer, everyone gets one final turn. The longest continuous route earns +10.</li>
+  <li>Rose, Sandy and Mint walk to everything they claim, so you can watch where they’re heading. Walk into any city to read about its landmark.</li>
+  <li>Sound: 🔊 effects and ♪ music are top right. Waiting on the robots? ⏩ (<span class="keys">F</span>) makes them hurry.</li>
+</ul>`}
+function openStart(){
+  sheet(`<div class="kicker">Four robots, one continent</div><h3>Walk Europe. Build the best railway.</h3>${rulesHTML()}
+  <div class="modes"><button class="btn primary" data-new="20">Quick game<small>20 trains each, about 10 minutes</small></button><button class="btn" data-new="30">Long game<small>30 trains each, fills the map</small></button></div>`);
+}
+/*@@OPENROUTE@@*/
+
+/* ===================================================================== SOUND (synthesized with Web Audio: no files) */
+const SND=(()=>{
+  let ctx=null,sfx=null,mus=null,NB=null,nextT=0,step=0,mood='calm';
+  const on={sfx:true,music:true};
+  try{Object.assign(on,JSON.parse(localStorage.getItem('junction3d-sound')||'{}'))}catch(e){}
+  const save=()=>{try{localStorage.setItem('junction3d-sound',JSON.stringify(on))}catch(e){}};
+  const N=n=>440*Math.pow(2,(n-69)/12);
+  function init(){
+    if(FAST)return;
+    if(ctx){if(ctx.state==='suspended')ctx.resume();return}
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    ctx=new AC();const comp=ctx.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=3;comp.connect(ctx.destination);
+    sfx=ctx.createGain();sfx.gain.value=on.sfx?.8:0;sfx.connect(comp);
+    mus=ctx.createGain();mus.gain.value=on.music?.2:0;mus.connect(comp);
+    NB=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate);const d=NB.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    setInterval(schedule,90);
+  }
+  function tone(f,o={}){
+    if(!ctx)return;const t=ctx.currentTime+(o.at||0),a=o.a||.005,d=o.d||.25,g=o.g||.2;
+    const osc=ctx.createOscillator(),v=ctx.createGain();osc.type=o.type||'sine';osc.frequency.setValueAtTime(f,t);
+    if(o.glide)osc.frequency.exponentialRampToValueAtTime(Math.max(20,f*o.glide),t+a+d);
+    v.gain.setValueAtTime(.0001,t);v.gain.exponentialRampToValueAtTime(g,t+a);v.gain.exponentialRampToValueAtTime(.0001,t+a+d);
+    osc.connect(v);let out=v;if(o.lp){const fl=ctx.createBiquadFilter();fl.type='lowpass';fl.frequency.value=o.lp;v.connect(fl);out=fl}
+    out.connect(o.bus||sfx);osc.start(t);osc.stop(t+a+d+.05);
+  }
+  function noise(o={}){
+    if(!ctx)return;const t=ctx.currentTime+(o.at||0),a=o.a||.004,d=o.d||.15,g=o.g||.15;
+    const src=ctx.createBufferSource();src.buffer=NB;const fl=ctx.createBiquadFilter();fl.type=o.type||'bandpass';fl.frequency.setValueAtTime(o.f||2000,t);
+    if(o.sweep)fl.frequency.exponentialRampToValueAtTime((o.f||2000)*o.sweep,t+a+d);fl.Q.value=o.q||1;
+    const v=ctx.createGain();v.gain.setValueAtTime(.0001,t);v.gain.exponentialRampToValueAtTime(g,t+a);v.gain.exponentialRampToValueAtTime(.0001,t+a+d);
+    src.connect(fl);fl.connect(v);v.connect(o.bus||sfx);src.start(t,Math.random()*.5);src.stop(t+a+d+.05);
+  }
+  const fx={
+    click(){tone(1500,{type:'triangle',d:.04,g:.05})},
+    step(k){noise({d:.045,g:.06*k,f:700+Math.random()*500,q:2.5})},
+    pickup(k=1){tone(N(84),{type:'triangle',d:.16,g:.22*k});tone(N(91),{type:'triangle',d:.3,g:.2*k,at:.07})},
+    deck(){noise({d:.13,g:.16,f:3200,sweep:.35,q:.8})},
+    claim(len,k=1){for(let i=0;i<len;i++){noise({d:.05,g:.2*k,f:1300,q:3,at:i*.09});tone(N(67+[0,4,7,12,16,19][i%6]),{type:'triangle',d:.2,g:.16*k,at:i*.09+.02})}},
+    flip(i){noise({d:.06,g:.16,f:4000,sweep:.5,q:1.5,at:i*.16})},
+    tunnel(bad){[0,1,2].forEach(fx.flip);if(bad)tone(98,{type:'sawtooth',d:.4,g:.12,lp:700,at:.55});else{tone(N(79),{type:'triangle',d:.25,g:.16,at:.55});tone(N(86),{type:'triangle',d:.35,g:.14,at:.65})}},
+    ticket(){noise({d:.22,g:.1,f:2600,q:.6})},
+    ticketDone(){[72,76,79,84].forEach((n,i)=>tone(N(n),{type:'triangle',d:.3,g:.18,at:i*.1}))},
+    station(){tone(N(52),{type:'square',d:.14,g:.12,lp:900});tone(N(88),{d:.7,g:.12,at:.08});tone(N(95),{d:.6,g:.07,at:.12})},
+    chime(){tone(N(88),{d:.45,g:.05});tone(N(95),{d:.55,g:.04,at:.06})},
+    yourTurn(){tone(N(76),{type:'triangle',d:.22,g:.13});tone(N(72),{type:'triangle',d:.35,g:.13,at:.16})},
+    finalRound(){[0,.22,.44].forEach(a=>tone(N(81),{type:'square',d:.1,g:.07,lp:2200,at:a}))},
+    win(){[[72,0],[76,.12],[79,.24],[84,.36],[79,.52],[84,.64]].forEach(([n,a])=>tone(N(n),{type:'triangle',d:.35,g:.2,at:a}));tone(N(48),{d:1.2,g:.2,at:.36})},
+    lose(){[[67,0],[63,.25],[60,.5],[55,.8]].forEach(([n,a])=>tone(N(n),{type:'triangle',d:.45,g:.16,at:a}))},
+    sabotage(){tone(320,{type:'sawtooth',d:.9,g:.14,glide:.12,lp:1500});[0,1,2,3].forEach(i=>tone(i%2?587:740,{type:'sawtooth',d:.24,g:.09,lp:2400,at:.7+i*.26}));for(let i=0;i<8;i++)noise({d:.03,g:.14,f:5000,q:3,at:.1+Math.random()*.6})},
+    meeting(){[0,.16].forEach(a=>tone(880,{type:'square',d:.12,g:.1,lp:3000,at:a}));tone(110,{type:'sawtooth',d:.6,g:.16,lp:500,at:.3});noise({d:.08,g:.25,f:300,q:1,at:.3})},
+    blip(){tone(N(90+Math.floor(Math.random()*6)),{type:'square',d:.03,g:.035,lp:3000})},
+    vote(){tone(170,{type:'square',d:.1,g:.12,lp:700});noise({d:.05,g:.12,f:600,q:2})},
+    verdict(good){if(good)[0,4,7,12].forEach((n,i)=>tone(N(72+n),{type:'triangle',d:.4,g:.17,at:i*.09}));else{tone(N(50),{type:'sawtooth',d:1.1,g:.15,lp:600});tone(N(53),{type:'sawtooth',d:1.1,g:.12,lp:600})}},
+    eject(){noise({d:1.2,g:.2,f:500,sweep:6,q:1.2})},
+    splash(){noise({d:.7,g:.22,type:'lowpass',f:1200,sweep:.3,a:.01})},
+  };
+  // adaptive music: a soft 8th-note loop (calm), a pulsing minor groove (tense), a heartbeat (meeting)
+  const PROG={calm:[[60,64,67],[57,60,64],[53,57,60],[55,59,62]],tense:[[57,60,64],[53,57,60],[50,53,57],[52,56,59]]};
+  function schedule(){
+    if(!ctx||!on.music)return;const spb=.3;
+    if(nextT<ctx.currentTime)nextT=ctx.currentTime+.05;
+    while(nextT<ctx.currentTime+.3){
+      const at=nextT-ctx.currentTime,s=step%8,bar=Math.floor(step/8)%4,b={bus:mus};
+      if(mood==='meeting'){if(s===0||s===4){tone(55,{...b,d:.12,g:.5,at});tone(52,{...b,d:.12,g:.35,at:at+.18})}if(s===0)tone(N(81),{...b,type:'triangle',d:1.1,g:.05,at})}
+      else{const ch=(mood==='tense'?PROG.tense:PROG.calm)[bar];
+        if(mood==='tense'){tone(N(ch[0]-24),{...b,type:'sawtooth',d:.14,g:.12,lp:420,at});if(s%2===0)noise({...b,d:.025,g:.05,f:7000,q:2,at});if(s===0)tone(N(ch[2]+12),{...b,type:'triangle',d:.9,g:.06,at})}
+        else{tone(N(ch[[0,1,2,1,0,2,1,2][s]]+12),{...b,type:'triangle',d:.22,g:.07,at});if(s===0)tone(N(ch[0]-24),{...b,d:1.1,g:.22,at});if(s===4)tone(N(ch[2]-24),{...b,d:.6,g:.14,at});if(s===2||s===6)noise({...b,d:.02,g:.025,f:8000,q:2,at})}}
+      nextT+=spb;step++;
+    }
+  }
+  return{init,fx,on,
+    setMood(m){mood=m},
+    toggle(k){on[k]=!on[k];save();if(ctx){(k==='sfx'?sfx:mus).gain.setTargetAtTime(on[k]?(k==='sfx'?.8:.2):0,ctx.currentTime,.05)}},
+    get ready(){return !!ctx&&on.sfx}};
+})();
+/* fast bots: they hurry through their turns so you wait less (F) */
+let FF=false;try{FF=localStorage.getItem('junction3d-ff')==='1'}catch(e){}
+
+/* ===================================================================== 3D WORLD */
+const LAND_H=1.4,TOP=LAND_H+.3,CAR_TOP=TOP+1.15;
+const WX=id=>C[id].x-196,WZ=id=>C[id].y-150,W=id=>[WX(id),WZ(id)];
+const toW=([lo,la])=>{const[x,y]=proj(lo,la);return[x-196,y-150]};
+const LANDPOLY=LANDS.map(p=>p.map(toW)),SEAPOLY=BLACKSEA.map(toW);
+function inPoly(x,z,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const[xi,zi]=P[i],[xj,zj]=P[j];if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi)c=!c}return c}
+const onLand=(x,z)=>!inPoly(x,z,SEAPOLY)&&LANDPOLY.some(P=>inPoly(x,z,P));
+const SEGS=ROUTES.map(r=>({r,ax:WX(r.a),az:WZ(r.a),bx:WX(r.b),bz:WZ(r.b)}));
+function segDist(x,z,s){const dx=s.bx-s.ax,dz=s.bz-s.az,L2=dx*dx+dz*dz;let t=((x-s.ax)*dx+(z-s.az)*dz)/L2;t=Math.max(0,Math.min(1,t));return[Math.hypot(x-(s.ax+dx*t),z-(s.az+dz*t)),t]}
+const onTrack=(x,z,w=3.3)=>SEGS.some(s=>segDist(x,z,s)[0]<w);
+const nearCityAny=(x,z,r=6)=>IDS.some(id=>Math.hypot(x-WX(id),z-WZ(id))<r);
+const walkable=(x,z)=>Math.abs(x)<196&&Math.abs(z)<150&&(onLand(x,z)||onTrack(x,z)||nearCityAny(x,z));
+/* standing on top of a train car? (robots run along the car roofs) */
+function onCars(x,z){for(const s of SEGS){const[d,t]=segDist(x,z,s);if(d<1.5&&t>.09&&t<.91){const L=Math.hypot(s.bx-s.ax,s.bz-s.az),u=t*L;if(u>6&&u<L-6)return true}}return false}
+const routeMid=r=>[(WX(r.a)+WX(r.b))/2,(WZ(r.a)+WZ(r.b))/2];
+function nearestCity(x,z){let best=null,bd=1e9;for(const id of IDS){const d=Math.hypot(x-WX(id),z-WZ(id));if(d<bd){bd=d;best=id}}return{id:best,d:bd}}
+function straightOk(x0,z0,x1,z1){const d=Math.hypot(x1-x0,z1-z0),n=Math.ceil(d/1.5);for(let i=1;i<=n;i++){const u=i/n;if(!walkable(x0+(x1-x0)*u,z0+(z1-z0)*u))return false}return true}
+function cityPath(a,b){
+  if(a===b)return[a];
+  const res=dijkstra(ROUTES,a,b,r=>Math.hypot(WX(r.a)-WX(r.b),WZ(r.a)-WZ(r.b)));if(!res)return[a,b];
+  const seq=[a];let cur=a;for(const ri of res.edges.slice().reverse()){const r=ROUTES[ri];cur=r.a===cur?r.b:r.a;seq.push(cur)}return seq;
+}
+/* a walkable path from an actor to (x,z): straight if possible, else along the rail network */
+function planTo(A,x,z){
+  if(straightOk(A.x,A.z,x,z))return[[x,z]];
+  const from=nearestCity(A.x,A.z).id,to=nearestCity(x,z).id;
+  return[...cityPath(from,to).map(W),[x,z]];
+}
+
+/* ---- actors: the four robots ---- */
+const ACT=PLAYERS.map((p,i)=>({id:i,x:0,z:0,y:TOP,face:0,dir:0,phase:0,moving:false,path:null,onArrive:null,idle:1+i,hopT:-9,blinkT:0}));
+function resetActors(){
+  const [cx,cz]=W('MUN');
+  ACT.forEach((A,i)=>{A.x=cx+[-4,4,-4,4][i];A.z=cz+[4,4,-4,-4][i];A.y=TOP;A.face=0;A.path=null;const f=A.onArrive;A.onArrive=null;if(f)f();A.idle=1+i*0.7});
+}
+function walkTo(pid,x,z){
+  const A=ACT[pid];
+  if(A.onArrive){const f=A.onArrive;A.onArrive=null;f()}
+  if(FAST){A.x=x;A.z=z;A.path=null;return Promise.resolve()}
+  A.path=planTo(A,x,z);
+  return new Promise(res=>{A.onArrive=res});
+}
+function humanWalk(x,z){const A=ACT[0];if(A.onArrive){const f=A.onArrive;A.onArrive=null;f()}A.path=planTo(A,x,z);fx.target(x,z)}
+
+/* ---- renderer, scene, lights ---- */
+const canvas=$('world');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#bfe4f6');scene.fog=new THREE.Fog('#bfe4f6',300,720);
+const camera=new THREE.PerspectiveCamera(42,1,.5,2000);
+scene.add(new THREE.HemisphereLight('#ffffff','#9c8a5c',1.25));
+const sun=new THREE.DirectionalLight('#fff3dc',1.9);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-.0006;sun.shadow.normalBias=.04;
+Object.assign(sun.shadow.camera,{left:-90,right:90,top:90,bottom:-90,near:10,far:500});
+scene.add(sun,sun.target);
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+addEventListener('resize',resize);resize();
+
+const grad=new THREE.DataTexture(new Uint8Array([110,190,255]),3,1,THREE.RedFormat);grad.minFilter=grad.magFilter=THREE.NearestFilter;grad.needsUpdate=true;
+const toon=(c,o={})=>new THREE.MeshToonMaterial({color:c,gradientMap:grad,...o});
+const INK='#1c1d33',INKM=new THREE.MeshBasicMaterial({color:INK,side:THREE.BackSide}),INKL=new THREE.LineBasicMaterial({color:INK});
+const shell=(geo)=>new THREE.Mesh(geo,INKM); // inverted-hull outline
+function canvasTex(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t}
+function labelSprite(text,o={}){
+  const fs=46,pad=o.bg?18:12;let w=0;
+  const meas=document.createElement('canvas').getContext('2d');meas.font=`800 ${fs}px Nunito, sans-serif`;w=Math.ceil(meas.measureText(text).width)+pad*2;
+  const h=fs+pad*1.6;
+  const tex=canvasTex(w,h,(x)=>{
+    x.font=`800 ${fs}px Nunito, sans-serif`;x.textAlign='center';x.textBaseline='middle';
+    if(o.bg){x.fillStyle=INK;x.beginPath();x.roundRect(1,1,w-2,h-2,h/2);x.fill();x.fillStyle=o.bg;x.beginPath();x.roundRect(5,5,w-10,h-10,h/2-4);x.fill();x.fillStyle=o.color||INK;x.fillText(text,w/2,h/2+2)}
+    else{x.lineJoin='round';x.lineWidth=12;x.strokeStyle=o.halo||'#f3df9f';x.strokeText(text,w/2,h/2+2);x.fillStyle=INK;x.fillText(text,w/2,h/2+2)}
+  });
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthWrite:false,transparent:true}));
+  const S=o.size||2.6;sp.scale.set(S*w/h,S,1);sp.renderOrder=5;return sp;
+}
+
+/* ---- sea, land, Black Sea ---- */
+const waveImg=(rep)=>{const t=canvasTex(128,128,(x)=>{x.fillStyle='#6fc3ea';x.fillRect(0,0,128,128);x.strokeStyle='rgba(255,255,255,.5)';x.lineWidth=3.2;x.lineCap='round';
+  [[14,28],[78,60],[26,100]].forEach(([a,b])=>{x.beginPath();x.moveTo(a,b);x.quadraticCurveTo(a+8,b-8,a+16,b);x.quadraticCurveTo(a+24,b+8,a+32,b);x.stroke()})});t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rep[0],rep[1]);return t};
+const seaTex=waveImg([40,32]);
+const sea=new THREE.Mesh(new THREE.PlaneGeometry(1300,1040),toon('#ffffff',{map:seaTex}));sea.rotation.x=-Math.PI/2;sea.receiveShadow=true;scene.add(sea);
+const shapeOf=P=>{const s=new THREE.Shape();P.forEach(([x,z],i)=>i?s.lineTo(x,-z):s.moveTo(x,-z));s.closePath();return s};
+const outlineLoop=(P,y)=>{const g=new THREE.BufferGeometry().setFromPoints([...P,P[0]].map(([x,z])=>new THREE.Vector3(x,y,z)));return new THREE.Line(g,INKL)};
+const landTop=toon('#f3df9f'),landSide=toon('#c9ac66');
+LANDPOLY.forEach(P=>{
+  const g=new THREE.ExtrudeGeometry(shapeOf(P),{depth:LAND_H,bevelEnabled:true,bevelThickness:.3,bevelSize:.35,bevelSegments:1,curveSegments:1});
+  g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,[landTop,landSide]);m.receiveShadow=true;scene.add(m);scene.add(outlineLoop(P,TOP+.03));
+});
+{const bsTex=waveImg([1/32,1/32]);const g=new THREE.ExtrudeGeometry(shapeOf(SEAPOLY),{depth:.05,bevelEnabled:false});g.rotateX(-Math.PI/2);
+ const m=new THREE.Mesh(g,toon('#ffffff',{map:bsTex}));m.position.y=TOP-.02;m.receiveShadow=true;scene.add(m);scene.add(outlineLoop(SEAPOLY,TOP+.05))}
+
+/* ---- cities ---- */
+const CITY3={};
+const pinGeo=new THREE.CylinderGeometry(2,2,.7,28),pinBase=new THREE.CylinderGeometry(2.45,2.6,.5,28);
+function buildCities(){IDS.forEach(id=>{
+  const g=new THREE.Group();g.position.set(WX(id),TOP,WZ(id));
+  const base=new THREE.Mesh(pinBase,toon(INK));base.position.y=.25;
+  const mat=toon('#ffffff'),top=new THREE.Mesh(pinGeo,mat);top.position.y=.5;top.castShadow=true;top.receiveShadow=true;
+  const lbl=labelSprite(C[id].n);lbl.position.y=4.4;
+  g.add(base,top,lbl);scene.add(g);CITY3[id]={g,mat,lbl,station:null};
+})}
+
+/* ---- routes: one 3D car per space ---- */
+const R3=[];
+const TUNNEL_RIB=new THREE.TorusGeometry(1.95,.42,6,14,Math.PI);TUNNEL_RIB.rotateY(Math.PI/2);const STONE=toon('#8d9aae');
+function buildRoutes(){ROUTES.forEach(r=>{
+  const ax=WX(r.a),az=WZ(r.a),bx=WX(r.b),bz=WZ(r.b),dx=bx-ax,dz=bz-az,d=Math.hypot(dx,dz),ux=dx/d,uz=dz/d;
+  const sh=6.5,gap=1.5,w=(d-2*sh-gap*(r.len-1))/r.len,ang=Math.atan2(dz,dx);
+  const cars=[];
+  const body=new THREE.BoxGeometry(w,1.15,2.5),hull=new THREE.BoxGeometry(w+.32,1.47,2.82);
+  for(let k=0;k<r.len;k++){
+    const off=sh+k*(w+gap)+w/2,cx=ax+ux*off,cz=az+uz*off;
+    const g=new THREE.Group();g.position.set(cx,TOP+.6,cz);g.rotation.y=-ang;
+    const mat=toon(HEX[r.color]),m=new THREE.Mesh(body,mat);m.castShadow=true;m.receiveShadow=true;g.add(m,shell(hull));
+    const win=new THREE.Mesh(new THREE.BoxGeometry(Math.min(1.1,w*.4),.12,1.1),toon('#ffffff'));win.position.y=.64;win.visible=false;g.add(win);
+    let dot=null;if(k<r.ferry){dot=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.14,18),toon('#ffffff'));dot.position.y=.64;const dh=shell(new THREE.CylinderGeometry(.75,.75,.1,18));dh.position.y=.6;g.add(dot,dh)}
+    if(r.tunnel)[-.3,.3].forEach(f=>{const rib=new THREE.Mesh(TUNNEL_RIB,STONE);rib.position.set(f*w,-.55,0);rib.castShadow=true;g.add(rib)});
+    if(!onLand(cx,cz)){ // a little pier under cars that stand over water
+      const deck=new THREE.Mesh(new THREE.BoxGeometry(w+1.5,.35,3.3),toon('#9b7653'));deck.position.y=-.75;deck.receiveShadow=true;
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,TOP+.6,8),toon('#7a5a3c'));post.position.y=-(TOP+.6)/2-.6;g.add(deck,post);
+    }
+    scene.add(g);cars.push({g,mat,win,dot});
+  }
+  R3.push({cars,owner:null,popT:-9,hl:0});
+})}
+
+/* ---- floating cards, ticket markers, stations ---- */
+const cardTexCache={};
+function cardTex(c){
+  if(cardTexCache[c])return cardTexCache[c];
+  return cardTexCache[c]=canvasTex(192,256,(x)=>{
+    x.fillStyle=INK;x.beginPath();x.roundRect(0,0,192,256,30);x.fill();
+    if(c==='loco'){const g=x.createConicGradient(Math.PI/6,96,128);['#ef4f4f','#ff8c2e','#ffd23f','#3fbf5f','#3d7dfa','#a35cf0','#ef4f4f'].forEach((k,i)=>g.addColorStop(i/6,k));x.fillStyle=g}else x.fillStyle=HEX[c];
+    x.beginPath();x.roundRect(9,9,174,238,23);x.fill();
+    x.save();x.translate(96,100);x.scale(3.6,3.6);x.translate(-15,-10);x.lineWidth=1.8;x.strokeStyle=INK;
+    if(c==='loco'){x.fillStyle=INK;x.beginPath();x.roundRect(5,1,4,5,1);x.fill();x.fillStyle='#fff';x.beginPath();x.roundRect(2,5,16,9,3);x.fill();x.stroke();x.beginPath();x.roundRect(17,2,11,12,2);x.fill();x.stroke();x.fillStyle=INK;x.beginPath();x.roundRect(20,5,5,4,1);x.fill();x.beginPath();[7,15,23].forEach(cx=>{x.moveTo(cx+2.5,16.5);x.arc(cx,16.5,2.5,0,Math.PI*2)});x.fill()}
+    else{x.fillStyle='rgba(255,255,255,.92)';x.beginPath();x.roundRect(2,3,26,11,3);x.fill();x.stroke();x.fillStyle=INK;x.beginPath();x.roundRect(6,6,6,4,1);x.roundRect(17,6,6,4,1);x.fill();x.beginPath();x.arc(9,16.5,2.5,0,Math.PI*2);x.arc(21,16.5,2.5,0,Math.PI*2);x.fill()}
+    x.restore();
+    const lab=c==='loco'?'loco':c;x.font='800 34px Nunito, sans-serif';const tw=x.measureText(lab).width+26;
+    x.fillStyle='rgba(255,255,255,.9)';x.beginPath();x.roundRect(96-tw/2,176,tw,46,16);x.fill();x.fillStyle=INK;x.textAlign='center';x.textBaseline='middle';x.fillText(lab,96,200);
+  });
+}
+const CARDS3=[];
+function buildCards(){for(let i=0;i<5;i++){
+  const g=new THREE.Group();
+  const face=new THREE.MeshBasicMaterial({map:cardTex('red')}),edge=new THREE.MeshBasicMaterial({color:INK});
+  const card=new THREE.Mesh(new THREE.BoxGeometry(3.4,4.5,.22),[edge,edge,edge,edge,face,face]);card.position.y=7;
+  const beamMat=new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.2,depthWrite:false,side:THREE.DoubleSide});
+  const beam=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,36,18,1,true),beamMat);beam.position.y=18;
+  const ring=new THREE.Mesh(new THREE.RingGeometry(2.7,3.3,32),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.85,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.y=.9;
+  g.add(card,beam,ring);g.visible=false;scene.add(g);CARDS3.push({g,card,face,beamMat,ring,key:''});
+}}
+const diamondGeo=new THREE.OctahedronGeometry(1.25),diamondHull=new THREE.OctahedronGeometry(1.55);
+const MARKERS=[];
+function marker(){const g=new THREE.Group(),mat=toon('#ffc933'),m=new THREE.Mesh(diamondGeo,mat);m.scale.y=1.4;const h=shell(diamondHull);h.scale.y=1.4;g.add(m,h);g.visible=false;scene.add(g);return{g,mat}}
+function stationMesh(col){
+  const g=new THREE.Group(),mat=toon(col);
+  const box=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.8,2.2),mat);box.position.y=.9;box.castShadow=true;
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(2.05,1.5,4),mat);roof.rotation.y=Math.PI/4;roof.position.y=2.55;roof.castShadow=true;
+  const door=new THREE.Mesh(new THREE.BoxGeometry(.7,1.1,.1),toon(INK));door.position.set(0,.55,1.12);
+  g.add(box,shell(new THREE.BoxGeometry(2.5,2.1,2.5)).translateY(.9),roof,door);return g;
+}
+
+/* ---- the Sprocket robots, in 3D ---- */
+const ROBOTS=[],ROBOT_S=1.5;
+function makeRobot(p){
+  const root=new THREE.Group(),body=new THREE.Group();root.add(body);body.position.y=2.63;
+  const mat=toon(p.col);
+  const hexG=new THREE.CylinderGeometry(2,2,1.7,6);hexG.rotateX(Math.PI/2);hexG.rotateZ(Math.PI/6);
+  const hullG=new THREE.CylinderGeometry(2.24,2.24,1.98,6);hullG.rotateX(Math.PI/2);hullG.rotateZ(Math.PI/6);
+  const hex=new THREE.Mesh(hexG,mat);hex.castShadow=true;body.add(hex,shell(hullG));
+  const eye=new THREE.Group();eye.position.set(0,.05,.86);body.add(eye);
+  const disc=(r,h,c)=>{const g=new THREE.CylinderGeometry(r,r,h,32);g.rotateX(Math.PI/2);return new THREE.Mesh(g,c)};
+  eye.add(disc(1.2,.12,new THREE.MeshBasicMaterial({color:INK})));
+  const white=disc(1.02,.2,toon('#ffffff'));white.position.z=.05;eye.add(white);
+  const pupil=disc(.48,.12,new THREE.MeshBasicMaterial({color:INK}));pupil.position.z=.17;eye.add(pupil);
+  const shine=disc(.15,.05,new THREE.MeshBasicMaterial({color:'#ffffff'}));shine.position.set(.18,.18,.07);pupil.add(shine);
+  const ant=new THREE.Group();ant.position.y=1.7;body.add(ant);
+  const stick=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,1.4,8),new THREE.MeshBasicMaterial({color:INK}));stick.position.set(.15,.65,0);stick.rotation.z=-.2;
+  const ball=new THREE.Mesh(new THREE.SphereGeometry(.5,16,12),mat);ball.position.set(.32,1.45,0);ball.castShadow=true;
+  const ballH=shell(new THREE.SphereGeometry(.66,16,12));ballH.position.copy(ball.position);ant.add(stick,ball,ballH);
+  const feet=[-1,1].map(s=>{const f=new THREE.Mesh(new THREE.BoxGeometry(.9,.9,1.15),toon(INK));f.position.set(s*.92,.45,0);f.castShadow=true;root.add(f);return f});
+  const tag=labelSprite(p.name,{bg:p.col,color:INK,size:1.9});tag.position.y=6.6;root.add(tag);
+  root.scale.setScalar(ROBOT_S);scene.add(root);
+  return{root,body,eye,pupil,ant,feet};
+}
+const turnRing=new THREE.Mesh(new THREE.RingGeometry(2.9,3.7,40),new THREE.MeshBasicMaterial({color:'#ffc933',transparent:true,opacity:.95,depthWrite:false}));
+turnRing.rotation.x=-Math.PI/2;turnRing.scale.setScalar(1.5);scene.add(turnRing);
+
+/* ---- little effects ---- */
+const FX=[];
+const fx={
+  pickup(city,c){if(FAST)return;if(SND.ready){const d=Math.hypot(WX(city)-CAM.x,WZ(city)-CAM.z);SND.fx.pickup(Math.max(.25,1-d/90))}const m=new THREE.Mesh(new THREE.RingGeometry(1,1.6,32),new THREE.MeshBasicMaterial({color:c==='loco'?'#ffc933':HEX[c],transparent:true,depthWrite:false,side:THREE.DoubleSide}));m.rotation.x=-Math.PI/2;m.position.set(WX(city),TOP+1,WZ(city));scene.add(m);FX.push({m,t:0,d:.7,kind:'ring'})},
+  target(x,z){if(FAST)return;const m=new THREE.Mesh(new THREE.RingGeometry(.8,1.2,24),new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.set(x,TOP+.1,z);scene.add(m);FX.push({m,t:0,d:.6,kind:'ring'})},
+  puff(x,z){if(FAST)return;for(let i=0;i<10;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.6,8,6),toon('#e9e3d2'));m.position.set(x,TOP+1.5,z);scene.add(m);FX.push({m,t:0,d:.9,kind:'puff',v:new THREE.Vector3(Math.cos(i)*6,5+i%3,Math.sin(i)*6)})}},
+  hop(pid){ACT[pid].hopT=performance.now()/1000},
+  confetti(){if(FAST)return;const A=ACT[0],cols=['#14b8a6','#ff4fa3','#ffc933','#9be15d','#3d7dfa','#ff8c2e'];for(let i=0;i<70;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(.6,.1,.35),new THREE.MeshBasicMaterial({color:cols[i%6]}));m.position.set(A.x,TOP+6,A.z);scene.add(m);FX.push({m,t:0,d:2.4,kind:'conf',v:new THREE.Vector3((Math.random()-.5)*26,14+Math.random()*14,(Math.random()-.5)*26),s:new THREE.Vector3(Math.random()*8,Math.random()*8,0)})}},
+};
+function stepFX(dt){for(let i=FX.length-1;i>=0;i--){const f=FX[i];f.t+=dt;const u=f.t/f.d;
+  if(f.kind==='ring'){f.m.scale.setScalar(1+u*3);f.m.material.opacity=1-u}
+  else{f.v.y-=(f.kind==='conf'?22:14)*dt;f.m.position.addScaledVector(f.v,dt);if(f.s){f.m.rotation.x+=f.s.x*dt;f.m.rotation.y+=f.s.y*dt}if(f.kind==='puff')f.m.scale.setScalar(Math.max(.01,1-u))}
+  if(u>=1){scene.remove(f.m);f.m.geometry.dispose();f.m.material.dispose();FX.splice(i,1)}}}
+
+/* ---- keep the 3D world in step with the game state ---- */
+let wasOver=false;
+const world={sync(){
+  if(!R3.length)return;
+  const now=performance.now()/1000;
+  S.routes.forEach((r,i)=>{const w=R3[i];if(w.owner!==r.owner){if(r.owner!==null&&w.owner===null){w.popT=now;if(SND.ready){const[mx,mz]=routeMid(r);SND.fx.claim(r.len,r.owner===0?1:Math.max(.25,1-Math.hypot(mx-CAM.x,mz-CAM.z)/110))}}w.owner=r.owner;
+    w.cars.forEach(c=>{c.mat.color.set(r.owner!==null?PLAYERS[r.owner].col:HEX[r.color]);c.win.visible=r.owner!==null;if(c.dot)c.dot.visible=r.owner===null})}});
+  const stamped=new Set();S.routes.forEach(r=>{if(r.owner===0){stamped.add(r.a);stamped.add(r.b)}});
+  IDS.forEach(id=>{const c=CITY3[id];c.mat.color.set(stamped.has(id)?'#ffc933':'#ffffff');
+    const so=S.stationAt[id];
+    if(so!==undefined&&!c.station){SND.ready&&SND.fx.station();c.station=stationMesh(PLAYERS[so].col);c.station.position.set(WX(id)+2.9,TOP,WZ(id)-2.6);scene.add(c.station)}
+    if(so===undefined&&c.station){scene.remove(c.station);c.station=null}});
+  CARDS3.forEach((k,i)=>{const c=S.market[i],city=S.marketCity[i];k.g.visible=!!c;if(!c)return;const key=c+city;
+    if(k.key!==key){k.key=key;k.face.map=cardTex(c);k.face.needsUpdate=true;k.beamMat.color.set(c==='loco'?'#ffc933':HEX[c]);k.g.position.set(WX(city),TOP,WZ(city))}});
+  const det=H().tickets.length?ticketScore(H()).det:[];const nDone=det.filter(Boolean).length;if(nDone>(world.done||0)&&!S.over)SND.ready&&SND.fx.ticketDone();world.done=nDone;const tc=new Set();H().tickets.forEach((t,i)=>{if(!det[i]){tc.add(t.a);tc.add(t.b)}});
+  const list=[...tc];while(MARKERS.length<list.length)MARKERS.push(marker());
+  MARKERS.forEach((m,i)=>{m.g.visible=i<list.length&&!S.over;if(i<list.length){m.g.position.set(WX(list[i]),TOP+11,WZ(list[i]));m.city=list[i]}});
+  if(S.over&&!wasOver){fx.confetti();SND.ready&&(/^Game over\. You win/.test(S.log[0]&&S.log[0].t)?SND.fx.win():SND.fx.lose())}wasOver=S.over;
+}};
+
+/* ---- camera ---- */
+const CAM={x:0,z:0,dist:105,cur:105,pitch:.95,curP:.95,map:false};
+function stepCam(dt){
+  const A=ACT[0],k=1-Math.exp(-dt*5);
+  const mapD=Math.max(330,215/(Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect));
+  const tx=CAM.map?0:A.x,tz=CAM.map?14:A.z,d=CAM.map?mapD:CAM.dist,p=CAM.map?1.25:CAM.pitch;
+  CAM.x+=(tx-CAM.x)*k;CAM.z+=(tz-CAM.z)*k;CAM.cur+=(d-CAM.cur)*k;CAM.curP+=(p-CAM.curP)*k;
+  camera.position.set(CAM.x,TOP+CAM.cur*Math.sin(CAM.curP),CAM.z+CAM.cur*Math.cos(CAM.curP));
+  camera.lookAt(CAM.x,TOP,CAM.z);scene.fog.near=CAM.cur+120;scene.fog.far=CAM.cur+520;
+  const span=CAM.map?240:Math.min(200,Math.max(60,CAM.cur*1.1));
+  if(Math.abs(sun.shadow.camera.right-span)>1){Object.assign(sun.shadow.camera,{left:-span,right:span,top:span,bottom:-span});sun.shadow.camera.updateProjectionMatrix()}
+  sun.position.set(CAM.x-110,230,CAM.z+90);sun.target.position.set(CAM.x,0,CAM.z);
+}
+
+/* ---- input ---- */
+const KEYS=new Set();
+const sheetOpen=()=>!$('sheet').classList.contains('hidden');
+addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('input,textarea'))return;
+  const k=e.key.toLowerCase();
+  if(k==='escape'&&sheetOpen()){closeSheet();return}
+  if(sheetOpen())return;
+  if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){KEYS.add(k);e.preventDefault()}
+  if(k==='e'||(k===' '&&e.target===canvas)){e.preventDefault();useNow(0)}
+  if(k==='m')$('mapBtn').click();
+  if(k==='f')$('ffBtn').click();
+  if(k==='+'||k==='=')zoom(-15);if(k==='-')zoom(15);
+});
+addEventListener('keyup',e=>KEYS.delete(e.key.toLowerCase()));
+addEventListener('pointerdown',()=>SND.init(),true);addEventListener('keydown',()=>SND.init(),true);
+document.addEventListener('click',e=>{if(e.target.closest('button'))SND.ready&&SND.fx.click()},true);
+addEventListener('blur',()=>KEYS.clear());
+function zoom(d){CAM.dist=Math.max(40,Math.min(230,CAM.dist+d))}
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY*.05)},{passive:false});
+const ptrs=new Map();let pinch=0,downAt=null;
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);downAt=ptrs.size===1?[e.clientX,e.clientY,performance.now()]:null;if(ptrs.size===2){const[a,b]=[...ptrs.values()];pinch=Math.hypot(a[0]-b[0],a[1]-b[1])}});
+canvas.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,[e.clientX,e.clientY]);if(ptrs.size===2){const[a,b]=[...ptrs.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);zoom((pinch-d)*.15);pinch=d}});
+canvas.addEventListener('pointerup',e=>{ptrs.delete(e.pointerId);
+  if(downAt&&Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])<10&&performance.now()-downAt[2]<500&&!sheetOpen()&&S&&!S.locked)tapGround(e.clientX,e.clientY);downAt=null});
+canvas.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);downAt=null});
+const ray=new THREE.Raycaster(),plane=new THREE.Plane(new THREE.Vector3(0,1,0),-TOP);
+function tapGround(cx,cy){
+  ray.setFromCamera(new THREE.Vector2(cx/innerWidth*2-1,-(cy/innerHeight)*2+1),camera);
+  const p=new THREE.Vector3();if(!ray.ray.intersectPlane(plane,p))return;
+  let x=Math.max(-195,Math.min(195,p.x)),z=Math.max(-149,Math.min(149,p.z));
+  if(!walkable(x,z)){const c=nearestCity(x,z);x=WX(c.id);z=WZ(c.id)}
+  if(CAM.map){CAM.map=false;$('mapBtn').setAttribute('aria-pressed','false')}
+  humanWalk(x,z);
+}
+
+/* ---- actor movement + animation ---- */
+function stepActor(A,dt,t){
+  let vx=0,vz=0;
+  if(A.id===0&&!sheetOpen()){
+    vx=(KEYS.has('d')||KEYS.has('arrowright')?1:0)-(KEYS.has('a')||KEYS.has('arrowleft')?1:0);
+    vz=(KEYS.has('s')||KEYS.has('arrowdown')?1:0)-(KEYS.has('w')||KEYS.has('arrowup')?1:0);
+    if(vx||vz){A.path=null;const n=Math.hypot(vx,vz);vx/=n;vz/=n}
+  }
+  const busyBot=A.id!==0&&S&&S.turn===A.id&&S.busy;
+  const speed=(A.id===0?24:busyBot?(A.path&&A.path.length>2?80:50)*(FF?2.4:1):18)*dt; // bots stroll when idle, hurry on their turn
+  if(!vx&&!vz&&A.path&&A.path.length){
+    const[tx,tz]=A.path[0],dx=tx-A.x,dz=tz-A.z,d=Math.hypot(dx,dz);
+    if(d<=speed){A.x=tx;A.z=tz;A.path.shift();vx=dx/(d||1)*.001;vz=dz/(d||1)*.001;
+      if(!A.path.length){A.path=null;const f=A.onArrive;A.onArrive=null;if(f)f()}}
+    else{vx=dx/d;vz=dz/d;A.x+=vx*speed;A.z+=vz*speed}
+  }else if(vx||vz){ // keyboard walking: slide along coasts like a wall
+    const nx=A.x+vx*speed,nz=A.z+vz*speed;
+    if(walkable(nx,nz)){A.x=nx;A.z=nz}else if(walkable(nx,A.z)){A.x=nx;vz=0}else if(walkable(A.x,nz)){A.z=nz;vx=0}
+    else{let ok=false;for(const a of [.6,-.6,1.1,-1.1]){const c=Math.cos(a),s2=Math.sin(a),rx=vx*c-vz*s2,rz=vx*s2+vz*c;if(walkable(A.x+rx*speed,A.z+rz*speed)){A.x+=rx*speed;A.z+=rz*speed;vx=rx;vz=rz;ok=true;break}}if(!ok)vx=vz=0}
+  }
+  A.moving=!!(vx||vz);
+  if(A.moving){A.dir=Math.atan2(vx,vz);A.phase+=dt*13;const st=Math.floor(A.phase/Math.PI);if(st!==A.stepN){A.stepN=st;if(SND.ready&&!DIRON()){const k=A.id===0?1:Math.max(0,1-Math.hypot(A.x-CAM.x,A.z-CAM.z)/50)*.6;if(k>.05)SND.fx.step(k)}}}
+  const yaw=A.moving?Math.sin(A.dir)*.85:A.face*.6;A.face+=(yaw-A.face)*(1-Math.exp(-dt*12));
+  const ty=onCars(A.x,A.z)?CAR_TOP:TOP;A.y+=(ty-A.y)*(1-Math.exp(-dt*12));
+  // idle wandering between turns, like crewmates milling about
+  if(A.id!==0&&!A.path&&!A.onArrive&&S&&!S.over){A.idle-=dt;if(A.idle<=0){const nc=nearestCity(A.x,A.z).id,adj=ADJ[nc].map(ri=>ROUTES[ri]);const r=pick(adj),to=r.a===nc?r.b:r.a;A.path=Math.random()<.5?[[(WX(nc)+WX(to))/2,(WZ(nc)+WZ(to))/2]]:[W(to)];A.idle=1.5+Math.random()*3}}
+}
+function animRobot(R,A,t){
+  const hop=Math.max(0,1-(t-A.hopT)/.6),hy=hop>0?Math.sin((1-hop)*Math.PI)*2.4:0;
+  R.root.position.set(A.x,A.y+hy,A.z);R.root.rotation.y=A.face;
+  const s=Math.sin(A.phase);
+  if(A.moving){R.body.position.y=2.63+Math.abs(s)*.35;R.body.rotation.z=s*.07;R.feet[0].position.z=s*.5;R.feet[1].position.z=-s*.5;R.feet[0].position.y=.45+Math.max(0,Math.cos(A.phase))*.3;R.feet[1].position.y=.45+Math.max(0,-Math.cos(A.phase))*.3;R.ant.rotation.z=Math.sin(A.phase*.5)*.25}
+  else{R.body.position.y=2.63+Math.sin(t*2.2+A.id)*.06;R.body.rotation.z*=.9;R.feet.forEach(f=>{f.position.z*=.8;f.position.y=.45});R.ant.rotation.z=Math.sin(t*3+A.id)*.08}
+  if(t>A.blinkT){A.blinkT=t+2+Math.random()*3}
+  R.eye.scale.y=A.blinkT-t>0&&A.blinkT-t<.12?.12:1;
+  R.pupil.position.x=A.moving?Math.sin(A.dir)*.32:Math.sin(t*.7+A.id)*.3;R.pupil.position.y=A.moving?-Math.cos(A.dir)*.3:0;
+}
+
+/* ---- what can you use right here? ---- */
+function interactions(){
+  if(!S||S.locked)return[];
+  const A=ACT[0],out=[];
+  S.market.forEach((c,i)=>{if(!c)return;const id=S.marketCity[i];if(Math.hypot(A.x-WX(id),A.z-WZ(id))<6.5)
+    out.push({key:'m'+i+c,label:`Take ${c==='loco'?'locomotive':c+' card'}`,ok:canAct()&&!(c==='loco'&&S.drawn===1),go:()=>takeMarket(i)})});
+  const nc=nearestCity(A.x,A.z);
+  if(nc.d<5.5){const p=H(),can=canAct()&&!S.drawn&&p.stations>0&&S.stationAt[nc.id]===undefined;
+    out.push({key:'c'+nc.id,label:can?`Station · ${C[nc.id].n}`:`${C[nc.id].n} postcard`,ok:true,go:()=>openCity(nc.id),city:nc.id})}
+  else{let best=null,bd=3.3;SEGS.forEach((s,i)=>{const[d,t]=segDist(A.x,A.z,s);if(d<bd&&t>.08&&t<.92){bd=d;best=i}});
+    if(best!==null){const r=S.routes[best];out.push({key:'r'+best,label:r.owner===null?`Claim ${nm(r.a)}–${nm(r.b)}`:`${nm(r.a)}–${nm(r.b)}`,ok:true,go:()=>openRoute(best),route:best})}}
+  return out;
+}
+let IA=[],iaKey='';
+function useNow(k){const a=IA[k];if(a&&a.ok&&!sheetOpen())a.go()}
+function stepUI(){
+  IA=interactions();const key=IA.map(a=>a.key+a.ok).join('|')+(S&&S.busy);
+  if(key!==iaKey){iaKey=key;const b=$('useBtn'),a=IA[0];
+    b.disabled=!a||!a.ok;b.classList.toggle('go',!!(a&&a.ok&&canAct()));$('useLbl').textContent=a?a.label:'';
+    $('chips').innerHTML=IA.slice(1).map((a,i)=>`<button class="btn" data-ia="${i+1}" ${a.ok?'':'disabled'}>${a.label}</button>`).join('');}
+  // highlight the route you're standing on
+  const hr=IA.find(a=>a.route!==undefined),sel=S&&S.selected!==null?S.selected:(hr?hr.route:null),t=performance.now()/1000;
+  R3.forEach((w,i)=>{const want=i===sel?(.35+.25*Math.sin(t*6)):0;if(want||w.hl){w.hl=want;w.cars.forEach(c=>{c.mat.emissive.set('#ffc933');c.mat.emissiveIntensity=want})}});
+}
+$('useBtn').onclick=()=>useNow(0);
+$('chips').addEventListener('click',e=>{const b=e.target.closest('[data-ia]');if(b)useNow(+b.dataset.ia)});
+
+/* postcard toast when you walk into a city */
+let inCity=null,pcTimer=0;
+function stepPostcard(){
+  const A=ACT[0],nc=nearestCity(A.x,A.z);
+  if(nc.d<5&&nc.id!==inCity&&S&&!S.locked){inCity=nc.id;const[e,t,f]=INFO[nc.id],stamped=S.routes.some(r=>r.owner===0&&(r.a===nc.id||r.b===nc.id));
+    SND.ready&&SND.fx.chime();const el=$('postcard');el.innerHTML=`<div class="pt"><div class="pcE">${e}</div><div><div class="kicker">${C[nc.id].n}${stamped?'<span class="stamp">Stamped</span>':''}</div><h3>${t}</h3></div></div><p>${f}</p>`;el.hidden=false;clearTimeout(pcTimer);pcTimer=setTimeout(()=>el.hidden=true,4500)}
+  if(nc.d>9)inCity=null;
+}
+
+/* ---- HUD ---- */
+function render(){
+  if(!S)return;
+  $('roster').innerHTML=S.players.map(p=>{const hc=Object.values(p.hand).reduce((a,b)=>a+b,0);return `<div class="mate ${S.turn===p.id&&!S.over?'turn':''}">${sprocket(p.col)}<div class="nm">${p.name}</div><div class="meta">${p.trains} trains<br>${routePts(p.id)} pts, ${hc} cards</div></div>`}).join('');
+  const st=$('status'),fin=S.lastTurns!==null;
+  if(S.over){st.className='status wait';st.innerHTML='<span class="dot"></span>Game over.'}
+  else if(S.offer){st.className='status wait';st.innerHTML='<span class="dot"></span>Choose which tickets to keep.'}
+  else if(S.locked&&!S.pending){st.className='status wait';st.innerHTML='<span class="dot"></span>Pick a game length to start.'}
+  else if(S.busy){st.className='status wait';st.innerHTML=`<span class="dot"></span>${S.players[S.turn].name} is ${fin?'playing their final turn':'on the move'}… explore while you wait.`}
+  else{st.className='status'+(fin?' final':'');st.innerHTML=`<span class="dot"></span>${fin?'Your final turn. ':''}${S.drawn?'Grab one more floating card (not a locomotive) or draw from the deck.':'Your turn: grab a floating card, walk onto a route to claim it, draw tickets, or build a station in a city.'}`}
+  const p=H();
+  $('trains').textContent=`${p.trains} trains · ${p.stations} stations`;
+  const keys=[...COLS,'loco'].filter(c=>p.hand[c]>0);
+  $('hand').innerHTML=keys.length?keys.map(c=>cardHTML(c,`<span class="n">${p.hand[c]}</span>`)).join(''):'<span class="hint">No cards in hand.</span>';
+  const act=canAct(),left=S.deck.length+S.discard.length;
+  const db=$('deckBtn');db.disabled=!act||!left;db.textContent=`Deck (${left})`;
+  const tb=$('tixBtn');tb.disabled=!act||S.drawn>0||!S.ticketDeck.length;tb.textContent=`Draw tickets (${S.ticketDeck.length})`;
+  $('mkt').innerHTML=S.market.map((c,i)=>c?`<button class="mkrow" data-walk="${S.marketCity[i]}">${sw(c)}<span>${nm(S.marketCity[i])}</span><span class="d" data-d="${i}"></span></button>`:'').join('');
+  const det=p.tickets.length?ticketScore(p).det:[];
+  $('tickets').innerHTML=p.tickets.length?p.tickets.map((t,i)=>`<div class="ticket ${det[i]?'ok':''}" data-walkt="${t.a}|${t.b}" title="Walk there"><span>${det[i]?'✓ ':''}${nm(t.a)} to ${nm(t.b)}${t.long?'<span class="tag">Long</span>':''}</span><span class="pts">${t.p}</span></div>`).join(''):'<span class="hint">No tickets yet.</span>';
+  const stamped=IDS.filter(id=>S.routes.some(r=>r.owner===0&&(r.a===id||r.b===id))).length;
+  $('cards').textContent=`${stamped} of ${IDS.length} cities stamped`;
+  $('mytixBtn').textContent=`Tickets (${p.tickets.length})`;
+  world.sync();iaKey='';
+  const tb2=$('hudTop').getBoundingClientRect().bottom+8;$('hudLeft').style.top=tb2+'px';if(innerWidth<=640)$('postcard').style.top=tb2+'px';
+}
+function stepDistances(){const A=ACT[0];document.querySelectorAll('[data-d]').forEach(el=>{const id=S.marketCity[+el.dataset.d];if(id)el.textContent=Math.round(Math.hypot(A.x-WX(id),A.z-WZ(id))/4)+'m'})}
+$('tickets').addEventListener('click',e=>{const b=e.target.closest('[data-walkt]');if(!b||sheetOpen())return;const A=ACT[0],[a,c]=b.dataset.walkt.split('|');
+  const id=Math.hypot(A.x-WX(a),A.z-WZ(a))<Math.hypot(A.x-WX(c),A.z-WZ(c))?a:c;humanWalk(WX(id),WZ(id));$('tixPanel').hidden=true;$('mytixBtn').setAttribute('aria-expanded','false')});
+$('mkt').addEventListener('click',e=>{const b=e.target.closest('[data-walk]');if(b&&!sheetOpen()){const id=b.dataset.walk;humanWalk(WX(id),WZ(id))}});
+$('deckBtn').onclick=()=>takeDeck();
+$('tixBtn').onclick=drawTicketsHuman;
+$('mytixBtn').onclick=()=>{const p=$('tixPanel'),open=p.hidden;p.hidden=!open;$('mytixBtn').setAttribute('aria-expanded',open)};
+$('helpBtn').onclick=()=>{if(S&&S.locked&&S.offer)return;sheet(`<h3>How to play</h3>${rulesHTML()}${closeBtn()}`)};
+$('mapBtn').onclick=()=>{CAM.map=!CAM.map;$('mapBtn').setAttribute('aria-pressed',CAM.map)};
+$('zin').onclick=()=>zoom(-18);$('zout').onclick=()=>zoom(18);
+const syncSoundBtns=()=>{$('sndBtn').setAttribute('aria-pressed',SND.on.sfx);$('sndBtn').textContent=SND.on.sfx?'🔊':'🔇';$('musBtn').setAttribute('aria-pressed',SND.on.music);$('ffBtn').setAttribute('aria-pressed',FF)};
+$('sndBtn').onclick=()=>{SND.init();SND.toggle('sfx');syncSoundBtns()};
+$('musBtn').onclick=()=>{SND.init();SND.toggle('music');syncSoundBtns()};
+$('ffBtn').onclick=()=>{FF=!FF;try{localStorage.setItem('junction3d-ff',FF?'1':'0')}catch(e){}syncSoundBtns()};
+syncSoundBtns();
+
+/* ---- minimap: the whole continent at a glance; tap to walk there ---- */
+const MM=$('minimap'),mm=MM.getContext('2d'),MK=2;let mmBase=null,mmT=0;
+function mmBuild(){
+  mmBase=document.createElement('canvas');mmBase.width=MM.width;mmBase.height=MM.height;const x=mmBase.getContext('2d');x.scale(MK,MK);
+  x.fillStyle='#6fc3ea';x.fillRect(0,0,392,300);x.fillStyle='#f3df9f';x.strokeStyle='#1c1d33';x.lineWidth=.8;x.lineJoin='round';
+  const poly=P=>{x.beginPath();P.forEach(([wx,wz],i)=>i?x.lineTo(wx+196,wz+150):x.moveTo(wx+196,wz+150));x.closePath()};
+  LANDPOLY.forEach(P=>{poly(P);x.fill();x.stroke()});x.fillStyle='#6fc3ea';poly(SEAPOLY);x.fill();x.stroke();
+}
+function drawMinimap(){
+  if(!S)return;if(!mmBase)mmBuild();
+  mm.setTransform(1,0,0,1,0,0);mm.drawImage(mmBase,0,0);mm.setTransform(MK,0,0,MK,0,0);
+  const P=(id)=>[C[id].x,C[id].y];
+  S.routes.forEach(r=>{const[a1,a2]=P(r.a),[b1,b2]=P(r.b);mm.beginPath();mm.moveTo(a1,a2);mm.lineTo(b1,b2);
+    if(r.blocked){mm.setLineDash([3,2]);mm.strokeStyle='#ff3b4f';mm.lineWidth=3}else if(r.owner!==null){mm.setLineDash([]);mm.strokeStyle=PLAYERS[r.owner].col;mm.lineWidth=3.2}
+    else{mm.setLineDash([]);mm.strokeStyle=HEX[r.color];mm.globalAlpha=.55;mm.lineWidth=1.6}
+    mm.stroke();mm.globalAlpha=1;mm.setLineDash([])});
+  const own0=new Set();S.routes.forEach(r=>{if(r.owner===0){own0.add(r.a);own0.add(r.b)}});
+  IDS.forEach(id=>{const[x,y]=P(id);mm.beginPath();mm.arc(x,y,2.6,0,7);mm.fillStyle=own0.has(id)?'#ffc933':'#fff';mm.fill();mm.lineWidth=.8;mm.strokeStyle='#1c1d33';mm.stroke()});
+  // your unfinished ticket cities
+  const det=H().tickets.length?ticketScore(H()).det:[];H().tickets.forEach((t,i)=>{if(det[i])return;[t.a,t.b].forEach(id=>{const[x,y]=P(id);mm.beginPath();mm.arc(x,y,6+Math.sin(clockMM()*4)*1,0,7);mm.strokeStyle='#e8a400';mm.lineWidth=1.8;mm.stroke()})});
+  // floating cards
+  S.market.forEach((c,i)=>{if(!c)return;const[x,y]=P(S.marketCity[i]);mm.save();mm.translate(x,y-7);mm.rotate(Math.PI/4);mm.fillStyle=c==='loco'?'#ffc933':HEX[c];mm.fillRect(-2.6,-2.6,5.2,5.2);mm.lineWidth=.8;mm.strokeStyle='#1c1d33';mm.strokeRect(-2.6,-2.6,5.2,5.2);mm.restore()});
+  // what the camera sees
+  const hw=Math.max(18,CAM.cur*.42*Math.min(1.6,camera.aspect)),hh=Math.max(14,CAM.cur*.5);
+  mm.strokeStyle='rgba(28,29,51,.55)';mm.lineWidth=1;mm.strokeRect(CAM.x+196-hw,CAM.z+150-hh*.75,hw*2,hh*1.4);
+  // robots
+  ACT.forEach((A,i)=>{if(S.players[i].alive===false)return;const x=A.x+196,y=A.z+150,me=i===0;mm.beginPath();mm.arc(x,y,me?5:3.8,0,7);mm.fillStyle=PLAYERS[i].col;mm.fill();mm.lineWidth=me?1.6:1;mm.strokeStyle=me?'#fff':'#1c1d33';mm.stroke();if(me){mm.beginPath();mm.arc(x,y,6.6,0,7);mm.strokeStyle='#1c1d33';mm.lineWidth=.9;mm.stroke()}});
+}
+const clockMM=()=>performance.now()/1000;
+MM.addEventListener('click',e=>{if(!S||S.locked||sheetOpen())return;const r=MM.getBoundingClientRect();let x=(e.clientX-r.left)/r.width*392-196,z=(e.clientY-r.top)/r.height*300-150;
+  if(!walkable(x,z)){const c=nearestCity(x,z);x=WX(c.id);z=WZ(c.id)}
+  if(CAM.map){CAM.map=false;$('mapBtn').setAttribute('aria-pressed','false')}humanWalk(x,z)});
+
+/* ---- main loop ---- */
+let last=performance.now(),uiT=0;
+function loop(now){
+  const dt=Math.min(.1,(now-last)/1000),t=now/1000;last=now;
+  if(S){
+    ACT.forEach((A,i)=>{stepActor(A,dt,t);animRobot(ROBOTS[i],A,t)});
+    const TA=ACT[S.turn];turnRing.visible=!S.over;turnRing.position.set(TA.x,A0y(TA)+.08,TA.z);turnRing.rotation.z=t;
+    CARDS3.forEach((k,i)=>{k.card.position.y=7+Math.sin(t*2+i)*.6;k.card.rotation.y=t*1.4+i;k.ring.scale.setScalar(1+.08*Math.sin(t*4+i))});
+    MARKERS.forEach((m,i)=>{m.g.rotation.y=t*1.5+i;m.g.position.y=TOP+11+Math.sin(t*2.4+i)*.5});
+    R3.forEach(w=>{const u=t-w.popT;if(u>=0&&u<.7){const s=1+Math.sin(u/.7*Math.PI)*.45;w.cars.forEach((c,k)=>{const v=Math.max(0,Math.min(1,(u-k*.07)/.35));c.g.scale.set(1,1+Math.sin(v*Math.PI)*.8,1)})}else if(u<1)w.cars.forEach(c=>c.g.scale.set(1,1,1))});
+    stepFX(dt);stepCam(dt);
+    mmT-=dt;if(mmT<=0){mmT=.15;drawMinimap()}
+    // city names grow as you zoom out, so the overview stays readable
+    {const k=Math.max(.85,Math.min(2.6,CAM.cur/105));if(Math.abs(k-(world.lk||0))>.02){world.lk=k;IDS.forEach(id=>{const l=CITY3[id].lbl;if(!l.userData.base)l.userData.base=[l.scale.x,l.scale.y];l.scale.set(l.userData.base[0]*k,l.userData.base[1]*k,1);l.position.y=4.4+(k-1)*2})}}
+    uiT-=dt;if(uiT<=0){uiT=.1;stepUI();stepPostcard();stepDistances();SND.setMood(musicMood())}
+    seaTex.offset.x=(t*.004)%1;
+  }
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+}
+const A0y=A=>A.y;
+
+/* ---- sounds for rules that open sheets ---- */
+{const sc=startClaim;startClaim=function(ri,o){sc(ri,o);if(S.pending&&SND.ready)SND.fx.tunnel(S.pending.extra>0)}}
+{const ot=offerTickets;offerTickets=function(...a){ot(...a);SND.ready&&SND.fx.ticket()}}
+{const td=takeDeck;takeDeck=function(){const n=Object.values(H().hand).reduce((a,b)=>a+b,0);td();if(Object.values(H().hand).reduce((a,b)=>a+b,0)>n)SND.ready&&SND.fx.deck()}}
+/* ---- music mood ---- */
+function musicMood(){return S&&S.lastTurns!==null&&!S.over?'tense':'calm'}
+function DIRON(){return typeof DIR!=='undefined'&&DIR.on}
+
+/* ---- boot ---- */
+async function boot(){
+  try{await Promise.race([Promise.all([document.fonts.load('800 46px Nunito'),document.fonts.load('700 20px Fredoka')]),new Promise(r=>setTimeout(r,2500))])}catch(e){}
+  if(innerWidth<innerHeight)CAM.dist=CAM.cur=140;
+  buildCities();buildRoutes();buildCards();
+  PLAYERS.forEach(p=>ROBOTS.push(makeRobot(p)));
+  newGame(20,true);openStart();
+  $('boot').remove();
+  requestAnimationFrame(loop);
+}
+boot();
+
+/* hooks for automated tests (bots play every seat headlessly with FAST=true) */
+window.J={get S(){return S},newGame,botTurn,endTurn,H,ACT,walkTo,interactions,takeMarket,openRoute,openCity,payOptions,startClaim,CAM,
+  setFast:v=>{FAST=v},render,canAct,walkable,planTo};
+</script>
+</body>
+</html>

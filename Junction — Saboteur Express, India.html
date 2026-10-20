@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Junction — Saboteur Express, India</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9eef7;--panel:#ffffff;--ink:#1a1f45;--muted:#5d6588;--line:#d3daea;
+  --land:#d9e2f2;--landEdge:#aab7d4;--sea:#f3f6fc;--accent:#d98a00;--accentInk:#1a1f45;
+  --danger:#e0263f;--good:#0f9b8e;--card:#f4f7fc;--star:rgba(26,31,69,.07);--scrim:rgba(26,31,69,.45);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#12163a;--panel:#1a2050;--ink:#eef1ff;--muted:#9aa3cc;--line:#2c3470;
+    --land:#222a5e;--landEdge:#3a4690;--sea:#151a44;--accent:#ffb020;--accentInk:#12163a;
+    --danger:#ff4d5e;--good:#2fd1bd;--card:#20275c;--star:rgba(238,241,255,.55);--scrim:rgba(6,8,24,.65);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12163a;--panel:#1a2050;--ink:#eef1ff;--muted:#9aa3cc;--line:#2c3470;
+  --land:#222a5e;--landEdge:#3a4690;--sea:#151a44;--accent:#ffb020;--accentInk:#12163a;
+  --danger:#ff4d5e;--good:#2fd1bd;--card:#20275c;--star:rgba(238,241,255,.55);--scrim:rgba(6,8,24,.65);
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box;margin:0}
+body{
+  background-color:var(--bg);color:var(--ink);
+  font-family:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  -webkit-font-smoothing:antialiased;line-height:1.45;
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 8%,var(--star) 50%,transparent 52%),
+    radial-gradient(1px 1px at 78% 14%,var(--star) 50%,transparent 52%),
+    radial-gradient(1.4px 1.4px at 44% 22%,var(--star) 50%,transparent 52%),
+    radial-gradient(1px 1px at 90% 40%,var(--star) 50%,transparent 52%),
+    radial-gradient(1.2px 1.2px at 6% 55%,var(--star) 50%,transparent 52%),
+    radial-gradient(1px 1px at 64% 70%,var(--star) 50%,transparent 52%),
+    radial-gradient(1.3px 1.3px at 28% 88%,var(--star) 50%,transparent 52%);
+  background-size:340px 520px;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:560px;margin:0 auto;padding:12px 12px 40px}
+.display{font-family:'Chakra Petch','Hanken Grotesk',system-ui,sans-serif}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 2px 12px}
+.brand{display:flex;gap:10px;align-items:center}
+.brand svg{width:34px;height:44px}
+h1{font-family:'Chakra Petch',sans-serif;font-size:24px;font-weight:700;letter-spacing:.04em;line-height:1}
+.sub{font-size:13px;color:var(--muted);margin-top:3px}
+.iconbtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--panel);font-weight:700;font-size:16px}
+
+.roster{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}
+.mate{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 4px 7px;text-align:center;position:relative}
+.mate svg{width:24px;height:32px;display:block;margin:0 auto 2px}
+.mate .nm{font-weight:700;font-size:12.5px}
+.mate .meta{color:var(--muted);font-size:11px;line-height:1.25}
+.mate.out{opacity:.38}
+.mate .flag{position:absolute;top:4px;right:5px;font-size:11px}
+.mate.you{border-color:var(--good)}
+
+.status{border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;background:var(--panel);border:1px solid var(--line);margin-bottom:8px;display:flex;gap:10px;align-items:center;min-height:44px}
+.status .lamp{width:10px;height:10px;border-radius:50%;background:var(--good);flex:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 25%,transparent)}
+.status.wait .lamp{background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.status.wait{color:var(--muted)}
+
+.mapwrap{background:var(--sea);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-bottom:10px;position:relative}
+.mapwrap .round{position:absolute;left:12px;top:10px;font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:13px;color:var(--muted)}
+#map{display:block;width:100%;height:auto;touch-action:manipulation}
+.land{fill:var(--land);stroke:var(--landEdge);stroke-width:1.2;stroke-linejoin:round}
+.node{fill:var(--panel);stroke:var(--ink);stroke-width:1.6}
+.node.reach{fill:var(--accent)}
+.node.done{fill:var(--good)}
+.lbl{font-family:'Hanken Grotesk',sans-serif;font-size:9.5px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--sea);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.pulse{fill:none;stroke:var(--accent);stroke-width:1.6;animation:pulse 2s ease-out infinite;transform-box:fill-box;transform-origin:center;pointer-events:none}
+@keyframes pulse{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.7)}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none;opacity:.6}}
+.city{cursor:pointer}
+.hit{cursor:pointer}
+.sel{stroke:var(--ink);stroke-width:12;opacity:.22;stroke-linecap:round}
+.warn{font-size:11px;text-anchor:middle;pointer-events:none}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 12px 12px;margin-bottom:10px}
+.ph{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;gap:8px}
+h2{font-family:'Chakra Petch',sans-serif;font-size:15px;font-weight:600}
+.hint{font-size:12.5px;color:var(--muted)}
+.cards{display:flex;flex-wrap:wrap;gap:8px}
+.card{width:46px;height:62px;border-radius:9px;border:none;background:var(--c);position:relative;color:#fff;font-weight:700;font-size:10.5px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.22),0 2px 0 rgba(0,0,0,.25);text-shadow:0 1px 1px rgba(0,0,0,.4)}
+.card::before{content:'';position:absolute;left:7px;right:7px;top:9px;height:15px;border-radius:4px;background:rgba(255,255,255,.3)}
+.card::after{content:'';position:absolute;left:9px;right:9px;top:31px;height:3px;border-radius:2px;background:rgba(0,0,0,.18)}
+.card.wild{background:conic-gradient(from 45deg,#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#a855f7,#ef4444)}
+.card .n{position:absolute;top:-7px;right:-7px;background:var(--ink);color:var(--bg);border-radius:11px;min-width:22px;height:22px;font-size:12px;display:grid;place-items:center;padding:0 6px;text-shadow:none}
+.card.deck{background:repeating-linear-gradient(45deg,var(--card),var(--card) 5px,var(--line) 5px,var(--line) 10px);color:var(--ink);text-shadow:none;box-shadow:inset 0 0 0 2px var(--line)}
+.card.deck::before,.card.deck::after{display:none}
+.card.deck span{background:var(--panel);border-radius:6px;padding:3px 5px}
+.card.empty{background:transparent;box-shadow:inset 0 0 0 2px var(--line)}
+.card.empty::before,.card.empty::after{display:none}
+button.card:disabled{opacity:.45;cursor:default}
+.handrow{display:flex;flex-wrap:wrap;gap:10px;padding-top:6px}
+.handrow .card{cursor:default}
+
+.tix{display:flex;flex-direction:column;gap:7px}
+.ticket{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600;padding:9px 11px;border-radius:10px;background:var(--card);border:1.5px dashed var(--line)}
+.ticket.ok{border-style:solid;border-color:var(--good)}
+.ticket .pts{font-family:'Chakra Petch',sans-serif;font-weight:700}
+.ticket.ok .pts{color:var(--good)}
+
+.emergency{width:100%;padding:15px;border-radius:999px;border:none;background:var(--danger);color:#fff;font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:16px;margin-bottom:10px;box-shadow:0 5px 0 color-mix(in srgb,var(--danger) 55%,#000);transition:transform .08s}
+.emergency:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 color-mix(in srgb,var(--danger) 55%,#000)}
+.emergency:disabled{background:var(--line);color:var(--muted);box-shadow:none;cursor:default}
+.emergency small{display:block;font-family:'Hanken Grotesk',sans-serif;font-weight:500;font-size:12px;opacity:.85}
+
+#log{list-style:none;padding:0;display:flex;flex-direction:column;gap:7px;font-size:13px;line-height:1.4}
+#log li{padding-left:10px;border-left:2px solid var(--line)}
+#log li.danger{border-color:var(--danger)}
+#log li.good{border-color:var(--good)}
+
+.overlay{position:fixed;inset:0;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.overlay.hidden{display:none}
+.sheet{background:var(--panel);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px));max-height:86vh;overflow:auto;border:1px solid var(--line);border-bottom:none;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet h3{font-family:'Chakra Petch',sans-serif;font-size:22px;font-weight:700;line-height:1.15;margin-bottom:6px}
+.kicker{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:2px}
+.sheet p{font-size:15px;margin-bottom:12px;max-width:62ch}
+.sheet ul{padding-left:18px;margin-bottom:14px;font-size:14.5px}
+.sheet li{margin-bottom:7px}
+.lm{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.lmE{font-size:34px;width:56px;height:56px;border-radius:14px;background:var(--card);display:grid;place-items:center;flex:none}
+.note{padding:11px 12px;border-radius:12px;background:var(--card);font-size:14px;margin-bottom:12px}
+.task{border:1.5px solid var(--accent);border-radius:14px;padding:12px;margin-bottom:12px}
+.task .q{font-weight:700;margin-bottom:10px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.btn{display:block;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:15px;text-align:left}
+.btn.full{width:100%;text-align:center;margin-top:8px}
+.btn.primary{background:var(--accent);color:var(--accentInk);border-color:transparent}
+.btn.danger{background:var(--danger);color:#fff;border-color:transparent}
+.routeMeta{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted);margin-bottom:12px}
+.sw{width:22px;height:8px;border-radius:4px;flex:none}
+.votes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 4px}
+.vote{border:1px solid var(--line);background:var(--card);border-radius:14px;padding:10px 4px;text-align:center;font-weight:700}
+.vote svg{width:34px;height:46px;display:block;margin:0 auto 4px}
+.vote small{display:block;font-weight:500;color:var(--good);font-size:11px}
+.vote:disabled{opacity:.4;cursor:default}
+table.score{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 10px}
+table.score th{text-align:right;font-weight:600;color:var(--muted);font-size:12px;padding:4px 4px}
+table.score th:first-child,table.score td:first-child{text-align:left}
+table.score td{padding:8px 4px;border-top:1px solid var(--line);text-align:right}
+table.score td.tot{font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:16px}
+.who{display:flex;align-items:center;gap:6px;font-weight:700}
+.who svg{width:16px;height:22px}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <span id="logo"></span>
+      <div><h1>Junction</h1><div class="sub">Saboteur Express across India</div></div>
+    </div>
+    <button class="iconbtn" id="helpBtn" aria-label="How to play">?</button>
+  </header>
+
+  <div class="roster" id="roster"></div>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+
+  <div class="mapwrap">
+    <div class="round" id="roundLbl"></div>
+    <svg id="map" viewBox="0 0 392 394" role="img" aria-label="Rail map of India"></svg>
+  </div>
+
+  <button class="emergency" id="meetingBtn"></button>
+
+  <section class="panel">
+    <div class="ph"><h2>Your tickets</h2><span class="hint" id="trains"></span></div>
+    <div class="tix" id="tickets"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ph"><h2>Your hand</h2><span class="hint">Grey routes take any one colour</span></div>
+    <div class="handrow" id="hand"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ph"><h2>Station market</h2><span class="hint" id="draws"></span></div>
+    <div class="cards" id="market"></div>
+  </section>
+
+  <section class="panel">
+    <div class="ph"><h2>Ship log</h2></div>
+    <ol id="log"></ol>
+  </section>
+</div>
+
+<div class="overlay hidden" id="sheet"><div class="sheet" id="sheetBody" role="dialog" aria-modal="true"></div></div>
+
+<script>
+const CARD=['red','blue','green','yellow','purple','orange'];
+const HEX={red:'#ef4444',blue:'#3b82f6',green:'#22c55e',yellow:'#eab308',purple:'#a855f7',orange:'#f97316',gray:'#94a3b8'};
+const PTS={1:1,2:2,3:4,4:7};
+const MAXR=14, START_TRAINS=20;
+
+const C={
+  AMR:{n:'Amritsar',x:90,y:70,l:'l'},   DEL:{n:'Delhi',x:120,y:106,l:'t'},
+  JAI:{n:'Jaipur',x:98,y:131,l:'l'},    AGR:{n:'Agra',x:140,y:128,l:'r'},
+  VAR:{n:'Varanasi',x:195,y:152,l:'r'}, KOL:{n:'Kolkata',x:262,y:186,l:'r'},
+  BHU:{n:'Bhubaneswar',x:226,y:214,l:'r'}, AHM:{n:'Ahmedabad',x:66,y:180,l:'l'},
+  BHO:{n:'Bhopal',x:122,y:178,l:'r'},   MUM:{n:'Mumbai',x:70,y:232,l:'l'},
+  HYD:{n:'Hyderabad',x:137,y:255,l:'r'},GOA:{n:'Goa',x:82,y:280,l:'l'},
+  BLR:{n:'Bengaluru',x:124,y:312,l:'l'},CHE:{n:'Chennai',x:158,y:310,l:'r'},
+  KOC:{n:'Kochi',x:110,y:348,l:'l'}
+};
+const R=[
+  ['AMR','DEL','red',2],['AMR','JAI','blue',3],['DEL','JAI','green',1],['DEL','AGR','orange',1],
+  ['JAI','AGR','gray',1],['DEL','VAR','gray',4],['AGR','VAR','purple',3],['VAR','KOL','green',3],
+  ['JAI','AHM','red',3],['AHM','MUM','yellow',2],['AHM','BHO','gray',2],['AGR','BHO','blue',2],
+  ['BHO','VAR','orange',3],['BHO','HYD','green',3],['MUM','BHO','purple',3],['MUM','GOA','blue',2],
+  ['MUM','HYD','red',3],['KOL','BHU','yellow',2],['BHU','HYD','blue',4],['BHU','CHE','gray',4],
+  ['HYD','CHE','purple',2],['HYD','BLR','orange',2],['GOA','BLR','green',2],['BLR','CHE','yellow',1],
+  ['BLR','KOC','red',2],['GOA','KOC','purple',3],['VAR','BHU','red',3]
+];
+const TICKETS=[
+  {a:'AMR',b:'KOL',p:10},{a:'DEL',b:'CHE',p:11},{a:'MUM',b:'KOL',p:11},{a:'JAI',b:'BLR',p:11},
+  {a:'AHM',b:'VAR',p:7},{a:'GOA',b:'KOL',p:13},{a:'KOC',b:'DEL',p:13},{a:'AGR',b:'HYD',p:6},
+  {a:'CHE',b:'KOL',p:8},{a:'MUM',b:'KOC',p:6},{a:'AMR',b:'MUM',p:8},{a:'VAR',b:'GOA',p:10}
+];
+const INFO={
+  AMR:{e:'🛕',t:'Golden Temple',f:'Harmandir Sahib runs a community kitchen that serves free meals to anyone who walks in, often tens of thousands of people a day, cooked largely by volunteers.',q:'What is the temple’s free community kitchen called?',o:['Langar','Dhaba','Tiffin'],a:0},
+  DEL:{e:'🗼',t:'Qutub Minar',f:'Begun around 1199, the 73-metre Qutub Minar is often called the world’s tallest brick minaret. Its fluted storeys are faced in red sandstone and marble.',q:'What is the Qutub Minar mainly faced with?',o:['Red sandstone','Black granite','Pink marble'],a:0},
+  JAI:{e:'🏰',t:'Hawa Mahal',f:'The “Palace of Winds” (1799) has 953 small latticed windows, built so royal women could watch street festivals without being seen. The honeycomb front also pulls breeze through the building.',q:'Roughly how many windows are on the Hawa Mahal’s facade?',o:['953','108','365'],a:0},
+  AGR:{e:'🕌',t:'Taj Mahal',f:'Shah Jahan built this white-marble mausoleum for his wife Mumtaz Mahal. Work ran from about 1632 to 1653 with around 20,000 artisans.',q:'Who commissioned the Taj Mahal?',o:['Shah Jahan','Akbar','Aurangzeb'],a:0},
+  VAR:{e:'🪔',t:'Ganga ghats',f:'More than 80 stone stairways line the Ganges here. Every evening at Dashashwamedh Ghat, priests perform the Ganga Aarti with huge brass fire lamps.',q:'What are Varanasi’s riverside stone steps called?',o:['Ghats','Stupas','Havelis'],a:0},
+  KOL:{e:'🌉',t:'Howrah Bridge',f:'Opened in 1943, this cantilever bridge was put together with rivets rather than nuts and bolts, and carries well over 100,000 vehicles a day.',q:'Which river does the Howrah Bridge cross?',o:['Hooghly','Yamuna','Narmada'],a:0},
+  BHU:{e:'☀️',t:'Konark Sun Temple',f:'About an hour from the city, this 13th-century temple is carved as the sun god’s chariot, with 24 stone wheels and seven horses. Some wheels work as sundials.',q:'Konark’s temple is carved in the shape of a giant…',o:['Chariot','Lotus','Elephant'],a:0},
+  AHM:{e:'🧵',t:'Sabarmati Ashram',f:'Gandhi lived here from 1917 to 1930. On 12 March 1930 he walked out of the ashram toward Dandi, about 385 km away, to defy the British salt tax.',q:'Which protest march began here in 1930?',o:['The Salt March','The Quit India march','The Long March'],a:0},
+  MUM:{e:'🏛️',t:'Gateway of India',f:'Built to mark King George V’s 1911 visit and finished in 1924, the basalt arch later saw the last British troops leave India in 1948.',q:'Which sea does the Gateway of India face?',o:['Arabian Sea','Bay of Bengal','Laccadive Sea'],a:0},
+  BHO:{e:'☸️',t:'Sanchi Stupa',f:'About 45 km from Bhopal, the Great Stupa was commissioned by Emperor Ashoka in the 3rd century BCE. Its four carved gateways tell stories from the Buddha’s life.',q:'Which emperor commissioned the Great Stupa?',o:['Ashoka','Chandragupta II','Harsha'],a:0},
+  HYD:{e:'🏙️',t:'Charminar',f:'Built in 1591 at the heart of the old city, the Charminar’s four 56-metre minarets frame a mosque on its top floor. The Laad Bazaar bangle market runs right beside it.',q:'“Charminar” translates to…',o:['Four minarets','Four gates','Four kings'],a:0},
+  GOA:{e:'⛪',t:'Basilica of Bom Jesus',f:'This 1605 baroque church in Old Goa holds the remains of St. Francis Xavier and is part of a UNESCO World Heritage site.',q:'Whose remains are kept in the basilica?',o:['St. Francis Xavier','St. Thomas','St. Patrick'],a:0},
+  BLR:{e:'🌿',t:'Lalbagh Botanical Garden',f:'Started by Hyder Ali in 1760 and expanded by Tipu Sultan, Lalbagh’s glasshouse was modelled on London’s Crystal Palace.',q:'Who started the Lalbagh garden?',o:['Hyder Ali','Shivaji','Krishnadevaraya'],a:0},
+  CHE:{e:'🏖️',t:'Marina Beach',f:'Stretching about 13 km along the city, Marina is one of the longest urban beaches in the world.',q:'Which body of water does Marina Beach face?',o:['Bay of Bengal','Arabian Sea','Gulf of Mannar'],a:0},
+  KOC:{e:'🎣',t:'Chinese fishing nets',f:'At Fort Kochi, giant cantilevered nets are dipped into the water by teams working against stone counterweights, a method believed to have arrived with Chinese traders centuries ago.',q:'What helps lift Fort Kochi’s big nets?',o:['Stone counterweights','Diesel winches','Tidal wheels'],a:0}
+};
+const PLAYERS=[
+  {id:0,name:'You',col:'#2dd4bf',human:true},
+  {id:1,name:'Rose',col:'#f472b6'},
+  {id:2,name:'Sandy',col:'#d6a86a'},
+  {id:3,name:'Frost',col:'#e2e8f0'}
+];
+const OUT=[[74.5,37],[77,35.5],[79,33],[78.8,31.5],[81,30],[84,28.3],[88,27],[89,26.5],[92,27],[96,28.5],[96.5,27],[94.5,24],[93,22],[91.5,23.5],[91,25],[89.5,25.5],[89,22],[87,21.5],[86.5,20],[84.5,18.5],[82.5,17],[81,15.5],[80.2,13.5],[79.8,11],[79,10],[77.5,8.1],[76.5,9],[75.8,11.5],[74.8,13],[74,15],[73.3,17],[72.8,19],[72.8,21],[72.5,22.3],[70.5,20.8],[69,22.3],[68.3,23.6],[70.2,25],[70.5,26.5],[69.6,27.2],[72,29],[73.5,30],[74.6,31.2],[73.8,33],[74,34.5]];
+const INDIA='M'+OUT.map(([lo,la])=>`${((lo-68)*13).toFixed(1)},${((37-la)*13).toFixed(1)}`).join('L')+'Z';
+
+const ADJ={};R.forEach(([a,b])=>{(ADJ[a]=ADJ[a]||[]).push(b);(ADJ[b]=ADJ[b]||[]).push(a)});
+const rand=n=>Math.floor(Math.random()*n);
+const pick=a=>a[rand(a.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const nm=id=>C[id].n;
+const $=id=>document.getElementById(id);
+
+function sprocketInner(col){return `<line x1="0" y1="-8" x2="1.5" y2="-13" stroke="#0b1030" stroke-width="1.6"/><circle cx="1.8" cy="-13.8" r="2.1" fill="${col}" stroke="#0b1030" stroke-width="1.2"/><rect x="-6" y="6.5" width="4" height="4.2" rx="1" fill="#0b1030"/><rect x="2" y="6.5" width="4" height="4.2" rx="1" fill="#0b1030"/><polygon points="9,0 4.5,7.8 -4.5,7.8 -9,0 -4.5,-7.8 4.5,-7.8" fill="${col}" stroke="#0b1030" stroke-width="1.6" stroke-linejoin="round"/><circle cx="0" cy="-0.5" r="4.3" fill="#fff" stroke="#0b1030" stroke-width="1.2"/><circle cx="1.3" cy="-0.5" r="2" fill="#0b1030"/>`}
+const sprocket=col=>`<svg viewBox="-11 -17 22 29" aria-hidden="true">${sprocketInner(col)}</svg>`;
+
+let S;
+const H=()=>S.players[0];
+
+function newGame(){
+  const deck=[];CARD.forEach(c=>{for(let i=0;i<12;i++)deck.push(c)});for(let i=0;i<10;i++)deck.push('wild');
+  shuffle(deck);
+  const tix=shuffle(TICKETS.map(t=>({...t})));
+  const ids=Object.keys(C);
+  S={deck,discard:[],round:1,drawsLeft:2,busy:false,over:false,finalRound:false,taskUsed:false,tasksDone:{},
+     meetingUsed:false,sabotages:0,caught:false,meetingPts:0,log:[],selected:null,botName:null,curCity:null,optOrder:[],
+     routes:R.map(([a,b,color,len],i)=>({i,a,b,color,len,owner:null,blocked:0})),
+     players:PLAYERS.map(p=>({...p,hand:{},trains:START_TRAINS,tickets:[],alive:true,cleared:false,pos:pick(ids)}))};
+  H().tickets=[tix.pop(),tix.pop()];
+  S.home=H().tickets[0].a;H().pos=S.home;
+  for(let i=1;i<4;i++)S.players[i].tickets=[tix.pop()];
+  S.players.forEach(p=>{for(let k=0;k<4;k++)give(p,draw())});
+  S.market=[];for(let k=0;k<5;k++)S.market.push(draw());
+  S.sab=1+rand(3);
+  addLog(`Shift started in ${nm(S.home)}. One of the other conductors is a saboteur.`);
+  render();
+}
+function draw(){if(!S.deck.length){S.deck=shuffle(S.discard);S.discard=[]}return S.deck.pop()||null}
+function give(p,c){if(c)p.hand[c]=(p.hand[c]||0)+1}
+function addLog(t,k=''){S.log.unshift({t,k});S.log=S.log.slice(0,40)}
+function cardName(c){return c==='wild'?'a wild card':`a ${c} card`}
+
+function canPay(p,r){
+  if(p.trains<r.len)return null;
+  const cols=r.color==='gray'?CARD:[r.color];let best=null;
+  for(const c of cols){const have=p.hand[c]||0,w=p.hand.wild||0;
+    if(have+w>=r.len){const n=Math.min(have,r.len),wu=r.len-n;if(!best||wu<best.w)best={c,n,w:wu}}}
+  return best;
+}
+function pay(p,plan){
+  if(plan.n){p.hand[plan.c]-=plan.n;for(let i=0;i<plan.n;i++)S.discard.push(plan.c)}
+  if(plan.w){p.hand.wild-=plan.w;for(let i=0;i<plan.w;i++)S.discard.push('wild')}
+}
+function claim(p,r){
+  r.owner=p.id;p.trains-=r.len;
+  p.pos=p.pos===r.a?r.b:(p.pos===r.b?r.a:r.b);
+  addLog(`${p.human?'You':p.name} claimed ${nm(r.a)}–${nm(r.b)} for ${PTS[r.len]} pts.`,p.human?'good':'');
+}
+function connected(pid,a,b){
+  const adj={};S.routes.forEach(r=>{if(r.owner===pid){(adj[r.a]=adj[r.a]||[]).push(r.b);(adj[r.b]=adj[r.b]||[]).push(r.a)}});
+  const seen=new Set([a]),q=[a];
+  while(q.length){const x=q.shift();if(x===b)return true;(adj[x]||[]).forEach(y=>{if(!seen.has(y)){seen.add(y);q.push(y)}})}
+  return false;
+}
+const routePts=pid=>S.routes.filter(r=>r.owner===pid).reduce((s,r)=>s+PTS[r.len],0);
+const reachable=id=>id===S.home||S.routes.some(r=>r.owner===0&&(r.a===id||r.b===id));
+const humanCanAct=()=>!S.busy&&!S.over;
+
+/* ---------- human actions ---------- */
+function takeMarket(i){
+  if(!humanCanAct())return;const c=S.market[i];if(!c)return;
+  give(H(),c);S.market[i]=draw();afterDraw(`You took ${cardName(c)} from the market.`);
+}
+function takeDeck(){
+  if(!humanCanAct())return;const c=draw();give(H(),c);
+  afterDraw(c?'You drew a card from the deck.':'The deck is empty.');
+}
+function afterDraw(msg){
+  S.drawsLeft--;addLog(msg);
+  if(S.drawsLeft<=0)endHuman();else render();
+}
+function humanClaim(i){
+  const r=S.routes[i],p=H();if(!humanCanAct()||r.owner!==null||r.blocked||S.drawsLeft<2)return;
+  const plan=canPay(p,r);if(!plan)return;
+  pay(p,plan);claim(p,r);closeSheet();endHuman();
+}
+function endHuman(){checkFinal(H());S.busy=true;render();runBots()}
+function checkFinal(p){
+  if(!S.finalRound&&p.trains<=2){S.finalRound=true;addLog(`${p.human?'You are':p.name+' is'} almost out of trains. This is the final round.`,'danger')}
+}
+
+/* ---------- bots ---------- */
+async function runBots(){
+  for(let i=1;i<4;i++){
+    const p=S.players[i];if(!p.alive)continue;
+    S.botName=p.name;render();await sleep(750);
+    botTurn(p);checkFinal(p);render();
+  }
+  await sleep(250);endRound();
+}
+function botTurn(p){
+  if(p.id===S.sab&&!S.caught&&S.round%3===0)sabotage(p);
+  const tc=new Set(p.tickets.flatMap(t=>[t.a,t.b]));
+  const opts=S.routes.filter(r=>r.owner===null&&!r.blocked).map(r=>({r,plan:canPay(p,r)})).filter(o=>o.plan);
+  if(opts.length&&Math.random()<0.8){
+    opts.forEach(o=>o.s=o.r.len+((tc.has(o.r.a)||tc.has(o.r.b))?2:0)+Math.random()*2-o.plan.w);
+    opts.sort((x,y)=>y.s-x.s);pay(p,opts[0].plan);claim(p,opts[0].r);
+  }else{
+    for(let k=0;k<2;k++){
+      if(Math.random()<0.4){const i=rand(5);if(S.market[i]){give(p,S.market[i]);S.market[i]=draw();continue}}
+      give(p,draw());
+    }
+    p.pos=pick(ADJ[p.pos]);
+    addLog(`${p.name} drew 2 cards.`);
+  }
+}
+function sabotage(p){
+  const cand=S.routes.filter(r=>r.owner===null&&!r.blocked&&(r.a===p.pos||r.b===p.pos));
+  if(!cand.length)return;
+  const r=pick(cand);r.blocked=3;S.sabotages++;
+  const hub=pick([r.a,r.b]);p.pos=pick([hub,...ADJ[hub]]);
+  const sight=S.players.filter(q=>!q.human&&q.alive).map(q=>`${q.name} at ${nm(q.pos)}`).join(', ');
+  addLog(`⚠ Sabotage! Signal fault on ${nm(r.a)}–${nm(r.b)}, blocked for 2 rounds. Sightings: ${sight}.`,'danger');
+}
+function endRound(){
+  S.routes.forEach(r=>{if(r.blocked>0)r.blocked--});
+  if(S.finalRound||S.round>=MAXR){endGame();return}
+  S.round++;S.drawsLeft=2;S.taskUsed=false;S.busy=false;S.botName=null;
+  if(S.round===MAXR&&!S.finalRound){S.finalRound=true;addLog('Last round of the shift.','danger')}
+  render();
+}
+
+/* ---------- sheets ---------- */
+const sheetEl=$('sheet'),sheetBody=$('sheetBody');
+function sheet(html){sheetBody.innerHTML=html;sheetEl.classList.remove('hidden');const b=sheetBody.querySelector('button');if(b)b.focus({preventScroll:true})}
+function closeSheet(){sheetEl.classList.add('hidden');if(S.selected!==null){S.selected=null;render()}}
+const note=t=>`<div class="note">${t}</div>`;
+const closeBtn=(t='Close')=>`<button class="btn full" data-close>${t}</button>`;
+
+function openHelp(){
+  sheet(`<h3>How a shift works</h3>
+  <p>You and three other Sprockets are building India’s rail network. One of them is secretly sabotaging it.</p>
+  <ul>
+    <li>On your turn, either draw 2 cards from the market or deck, or tap a route and claim it by paying matching cards. Wild cards match anything.</li>
+    <li>Connect the two cities on each ticket for bonus points. Unfinished tickets count against you.</li>
+    <li>Glowing amber cities are open to explore. Tap one to learn about its landmark and do a quick task for a wild card or a clue.</li>
+    <li>Every few rounds a route gets sabotaged. Check the sightings in the log, then call your one emergency meeting to eject a suspect: +15 if you’re right, −5 if you’re wrong.</li>
+    <li>The shift ends after round ${MAXR}, or once someone is nearly out of trains.</li>
+  </ul>
+  <button class="btn primary full" data-close>Start the shift</button>`);
+}
+function openRoute(i){
+  S.selected=i;render();
+  const r=S.routes[i],p=H();let act='';
+  if(r.owner!==null)act=note(`Claimed by ${r.owner===0?'you':S.players[r.owner].name}.`);
+  else if(r.blocked)act=note(`⚠ Sabotaged. Repairs finish in ${r.blocked} round${r.blocked>1?'s':''}.`);
+  else if(S.over)act=note('The shift is over.');
+  else if(S.busy)act=note('Wait for your turn.');
+  else if(S.drawsLeft<2)act=note('You’ve started drawing this turn. Take one more card to finish.');
+  else{
+    const plan=canPay(p,r);
+    if(!plan)act=note(p.trains<r.len?`You only have ${p.trains} trains left.`:`You need ${r.len} ${r.color==='gray'?'cards of one colour':r.color+' cards'}. Wild cards count.`);
+    else{const parts=[];if(plan.n)parts.push(`${plan.n} ${plan.c}`);if(plan.w)parts.push(`${plan.w} wild`);
+      act=`<button class="btn primary full" data-claim="${i}">Claim route, paying ${parts.join(' + ')}</button>`}
+  }
+  sheet(`<div class="kicker">Route</div><h3>${nm(r.a)} to ${nm(r.b)}</h3>
+  <div class="routeMeta"><span class="sw" style="background:${HEX[r.color]}"></span>${r.len} ${r.color==='gray'?'cards of any one colour':r.color+' cards'}, worth ${PTS[r.len]} pts</div>
+  ${act}${closeBtn()}`);
+}
+function openCity(id){
+  S.curCity=id;const c=C[id],inf=INFO[id],here=reachable(id),done=S.tasksDone[id];
+  const who=S.players.filter(p=>p.alive&&p.pos===id).map(p=>p.human?'you':p.name);
+  let body=`<div class="lm"><div class="lmE">${inf.e}</div><div><div class="kicker">${c.n}</div><h3>${inf.t}</h3></div></div><p>${inf.f}</p>`;
+  if(who.length)body+=note(`At this station now: ${who.join(', ')}.`);
+  if(done)body+=note('✓ You’ve completed the task here.');
+  else if(!here)body+=note(`🔒 Claim a route into ${c.n} to unlock its task.`);
+  else if(S.busy||S.over)body+=note('Tasks open on your turn.');
+  else if(S.taskUsed)body+=note('One task per turn. Come back next round.');
+  else{
+    S.optOrder=shuffle([0,1,2]);
+    body+=`<div class="task"><div class="kicker">Station task</div><p class="q">${inf.q}</p><div class="opts">${S.optOrder.map(k=>`<button class="btn" data-ans="${k}">${inf.o[k]}</button>`).join('')}</div></div>`;
+  }
+  sheet(body+closeBtn());
+}
+function answer(k){
+  const id=S.curCity,inf=INFO[id];S.taskUsed=true;S.tasksDone[id]=true;
+  if(k===inf.a){
+    addLog(`Task done at ${nm(id)}.`,'good');render();
+    sheet(`<div class="kicker">${nm(id)}</div><h3>Task complete</h3><p>Pick your reward.</p>
+    <button class="btn primary full" data-reward="wild">Take a wild card</button>
+    <button class="btn full" data-reward="clue">Check a crewmate’s alibi</button>`);
+  }else{
+    addLog(`Task failed at ${nm(id)}.`);render();
+    sheet(`<div class="kicker">${nm(id)}</div><h3>Not quite</h3><p>The answer was ${inf.o[inf.a]}. The panel sparks and shuts down, so no reward this time.</p>${closeBtn()}`);
+  }
+}
+function reward(kind){
+  let msg;
+  if(kind==='wild'){give(H(),'wild');addLog('You earned a wild card.','good');msg='A wild card is in your hand.'}
+  else{
+    const pool=S.players.filter(p=>!p.human&&p.id!==S.sab&&!p.cleared);
+    if(!pool.length){give(H(),'wild');msg='No new leads, so you get a wild card instead.';addLog('No new leads. You earned a wild card.')}
+    else{const p=pick(pool);p.cleared=true;msg=`${p.name}’s alibi checks out. ${p.name} is innocent.`;addLog(`🔍 ${msg}`,'good')}
+  }
+  render();sheet(`<h3>Reward</h3><p>${msg}</p>${closeBtn()}`);
+}
+function openMeeting(){
+  if(S.meetingUsed||!S.sabotages||!humanCanAct())return;
+  const bots=S.players.filter(p=>!p.human);
+  sheet(`<div class="kicker">Emergency meeting</div><h3>Who’s the saboteur?</h3>
+  <p>Check the sightings in the log. You only get one meeting.</p>
+  <div class="votes">${bots.map(p=>`<button class="vote" data-vote="${p.id}" ${p.alive?'':'disabled'}>${sprocket(p.col)}${p.name}${p.cleared?'<small>cleared</small>':''}</button>`).join('')}</div>
+  ${closeBtn('Skip for now')}`);
+}
+function vote(id){
+  const p=S.players[id];S.meetingUsed=true;p.alive=false;let t;
+  if(id===S.sab){S.caught=true;S.meetingPts=15;t=`${p.name} was the saboteur. The network is safe. +15 pts`;addLog(`🚨 ${p.name} was ejected. ${p.name} was the saboteur! +15`,'good')}
+  else{S.meetingPts=-5;t=`${p.name} was innocent. The saboteur is still out there. −5 pts`;addLog(`🚨 ${p.name} was ejected. ${p.name} was innocent. −5`,'danger')}
+  render();sheet(`<div class="kicker">Ejected</div><h3>${p.name}</h3><p>${t}</p>${closeBtn()}`);
+}
+function endGame(){
+  S.over=true;S.busy=false;S.botName=null;
+  const rows=S.players.map(p=>{
+    const rp=routePts(p.id);let tp=0;p.tickets.forEach(t=>{tp+=connected(p.id,t.a,t.b)?t.p:-t.p});
+    let bonus=0;if(p.human)bonus+=S.meetingPts;if(p.id===S.sab&&!S.caught)bonus+=10;
+    return{p,rp,tp,bonus,total:rp+tp+bonus};
+  }).sort((a,b)=>b.total-a.total);
+  const sab=S.players[S.sab];const win=rows[0].p.human;
+  addLog(`Shift over. ${rows[0].p.human?'You win':rows[0].p.name+' wins'}.`,'good');render();
+  sheet(`<div class="kicker">Shift over</div><h3>${win?'You run the best railway in India':rows[0].p.name+' takes the shift'}</h3>
+  <p>The saboteur was ${sab.name}. ${S.caught?'You caught them.':'They got away and earned +10.'}</p>
+  <table class="score"><tr><th>Conductor</th><th>Routes</th><th>Tickets</th><th>Bonus</th><th>Total</th></tr>
+  ${rows.map(r=>`<tr><td><span class="who">${sprocket(r.p.col)}${r.p.name}</span></td><td>${r.rp}</td><td>${r.tp>0?'+':''}${r.tp}</td><td>${r.bonus>0?'+':''}${r.bonus}</td><td class="tot">${r.total}</td></tr>`).join('')}
+  </table><button class="btn primary full" data-again>Start a new shift</button>`);
+}
+
+sheetEl.addEventListener('click',e=>{
+  if(e.target===sheetEl)return closeSheet();
+  const t=e.target.closest('button');if(!t)return;
+  if('close' in t.dataset)closeSheet();
+  else if(t.dataset.claim!==undefined)humanClaim(+t.dataset.claim);
+  else if(t.dataset.ans!==undefined)answer(+t.dataset.ans);
+  else if(t.dataset.reward)reward(t.dataset.reward);
+  else if(t.dataset.vote!==undefined)vote(+t.dataset.vote);
+  else if('again' in t.dataset){sheetEl.classList.add('hidden');newGame()}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheetEl.classList.contains('hidden'))closeSheet()});
+$('map').addEventListener('click',e=>{
+  const r=e.target.closest('[data-route]');if(r)return openRoute(+r.dataset.route);
+  const c=e.target.closest('[data-city]');if(c)return openCity(c.dataset.city);
+});
+$('map').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;const c=e.target.closest('[data-city]');if(c){e.preventDefault();openCity(c.dataset.city)}
+});
+$('helpBtn').onclick=openHelp;
+$('meetingBtn').onclick=openMeeting;
+
+/* ---------- render ---------- */
+function render(){
+  $('logo').innerHTML=sprocket('#2dd4bf');
+  $('roster').innerHTML=S.players.map(p=>`<div class="mate ${p.alive?'':'out'} ${p.human?'you':''}">
+    ${p.cleared?'<span class="flag" title="Innocent">✓</span>':''}${!p.alive?'<span class="flag">✕</span>':''}
+    ${sprocket(p.col)}<div class="nm">${p.name}</div><div class="meta">${p.trains} trains<br>${routePts(p.id)} pts</div></div>`).join('');
+  const st=$('status');
+  if(S.over){st.className='status wait';st.innerHTML='<span class="lamp"></span>Shift over.'}
+  else if(S.busy){st.className='status wait';st.innerHTML=`<span class="lamp"></span>${S.botName||'The crew'} is taking a turn…`}
+  else{st.className='status';st.innerHTML=`<span class="lamp"></span>${S.drawsLeft===2?'Your move. Draw 2 cards, or tap a route to claim it.':'Take one more card.'}`}
+  $('roundLbl').textContent=`Round ${S.round} of ${MAXR}`;
+  renderMap();
+  const mb=$('meetingBtn');
+  mb.disabled=S.meetingUsed||!S.sabotages||!humanCanAct();
+  mb.innerHTML=S.meetingUsed?'Meeting used':'Call emergency meeting'+`<small>${S.meetingUsed?'One per shift':(S.sabotages?'Eject the suspect you think did it':'Opens after the first sabotage')}</small>`;
+  $('trains').textContent=`${H().trains} trains left`;
+  $('tickets').innerHTML=H().tickets.map(t=>{const ok=connected(0,t.a,t.b);return `<div class="ticket ${ok?'ok':''}"><span>${ok?'✓ ':''}${nm(t.a)} to ${nm(t.b)}</span><span class="pts">${t.p}</span></div>`}).join('');
+  const h=H().hand;const keys=[...CARD,'wild'].filter(c=>h[c]>0);
+  $('hand').innerHTML=keys.length?keys.map(c=>`<div class="card ${c==='wild'?'wild':''}" style="--c:${HEX[c]||'#888'}"><span>${c==='wild'?'wild':c}</span><span class="n">${h[c]}</span></div>`).join(''):'<span class="hint">No cards yet. Draw from the market.</span>';
+  const dis=!humanCanAct();
+  $('market').innerHTML=S.market.map((c,i)=>c?`<button class="card ${c==='wild'?'wild':''}" style="--c:${HEX[c]||'#888'}" data-m="${i}" ${dis?'disabled':''} aria-label="Take ${c} card"><span>${c==='wild'?'wild':c}</span></button>`:`<div class="card empty"></div>`).join('')
+    +`<button class="card deck" data-deck ${dis?'disabled':''} aria-label="Draw from deck"><span>${S.deck.length+S.discard.length}</span></button>`;
+  $('draws').textContent=humanCanAct()?`${S.drawsLeft} of 2 draws left`:'';
+  $('log').innerHTML=S.log.slice(0,8).map(l=>`<li class="${l.k}">${l.t}</li>`).join('');
+}
+$('market').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.m!==undefined)takeMarket(+b.dataset.m);else if('deck' in b.dataset)takeDeck();
+});
+
+function renderMap(){
+  let s=`<g transform="translate(6,6)"><path d="${INDIA}" class="land"/><ellipse cx="165" cy="378" rx="6" ry="9" class="land"/>`;
+  S.routes.forEach(r=>{
+    const A=C[r.a],B=C[r.b],dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy),ux=dx/d,uy=dy/d;
+    const x1=A.x+ux*8,y1=A.y+uy*8,x2=B.x-ux*8,y2=B.y-uy*8,L=d-16,gap=2.4,dash=(L-gap*(r.len-1))/r.len;
+    const mx=(x1+x2)/2,my=(y1+y2)/2,ln=`x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"`;
+    if(S.selected===r.i)s+=`<line ${ln} class="sel"/>`;
+    if(r.owner!==null){const oc=S.players[r.owner].col;
+      s+=`<line ${ln} stroke="#0b1030" stroke-width="8" stroke-linecap="round" opacity=".55"/><line ${ln} stroke="${oc}" stroke-width="5.5" stroke-linecap="round"/><circle cx="${mx}" cy="${my}" r="3.4" fill="${oc}" stroke="#0b1030" stroke-width="1.4"/>`}
+    else s+=`<line ${ln} stroke="${HEX[r.color]}" stroke-width="5" stroke-dasharray="${dash.toFixed(2)} ${gap}" opacity=".9"/>`;
+    if(r.blocked)s+=`<line ${ln} stroke="var(--danger)" stroke-width="2.2" stroke-dasharray="3 3"/><circle cx="${mx}" cy="${my}" r="7" fill="var(--danger)"/><text x="${mx}" y="${my+3.6}" class="warn" fill="#fff">!</text>`;
+    s+=`<line ${ln} stroke="transparent" stroke-width="16" data-route="${r.i}" class="hit"/>`;
+  });
+  Object.entries(C).forEach(([id,c])=>{
+    const here=reachable(id),done=S.tasksDone[id];
+    const lx=c.l==='l'?c.x-9:c.l==='r'?c.x+9:c.x,ly=c.l==='t'?c.y-10:c.y+3.5,anc=c.l==='l'?'end':c.l==='r'?'start':'middle';
+    s+=`<g class="city" data-city="${id}" tabindex="0" role="button" aria-label="Explore ${c.n}">
+      ${here&&!done&&!S.over?`<circle cx="${c.x}" cy="${c.y}" r="9" class="pulse"/>`:''}
+      <circle cx="${c.x}" cy="${c.y}" r="6" class="node ${done?'done':here?'reach':''}"/>
+      <text x="${lx}" y="${ly}" text-anchor="${anc}" class="lbl">${c.n}</text>
+      <circle cx="${c.x}" cy="${c.y}" r="14" fill="transparent"/></g>`;
+  });
+  const off=[[-10,-14],[10,-14],[-10,15],[10,15]];
+  S.players.forEach((p,k)=>{if(!p.alive)return;const c=C[p.pos];
+    s+=`<g transform="translate(${c.x+off[k][0]},${c.y+off[k][1]}) scale(.62)" pointer-events="none">${sprocketInner(p.col)}</g>`});
+  $('map').innerHTML=s+'</g>';
+}
+
+newGame();openHelp();
+</script>
+</body>
+</html>

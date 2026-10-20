@@ -1,0 +1,14 @@
+{
+  "name": "saboteur-trailer",
+  "private": true,
+  "type": "module",
+  "description": "Junction: Saboteur Express trailer (vanilla JS canvas).",
+  "scripts": {
+    "serve": "python3 -m http.server 8123",
+    "frames": "node tools/render.mjs --stills",
+    "render": "node tools/render.mjs --video"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

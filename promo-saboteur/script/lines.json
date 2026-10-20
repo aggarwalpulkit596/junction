@@ -1,0 +1,106 @@
+[
+ {
+  "id": "L01",
+  "scene": "open",
+  "say": "Twenty trains. Four robots. One railway across Europe.",
+  "cap": [
+   "Twenty trains. Four robots.",
+   "One railway across Europe."
+  ]
+ },
+ {
+  "id": "L02",
+  "scene": "lineup",
+  "speed": 0.84,
+  "say": "But one of them...",
+  "cap": [
+   "But one of them…"
+  ]
+ },
+ {
+  "id": "L02B",
+  "scene": "lineup",
+  "speed": 0.8,
+  "say": "is a saboteur.",
+  "cap": [
+   "is a saboteur."
+  ]
+ },
+ {
+  "id": "L03",
+  "scene": "build",
+  "say": "Walk the rails. Claim the routes.",
+  "cap": [
+   "Walk the rails. Claim the routes."
+  ]
+ },
+ {
+  "id": "L04",
+  "scene": "tasks",
+  "say": "Solve station tasks for locomotives... or check a robot's alibi.",
+  "cap": [
+   "Solve station tasks for locomotives…",
+   "or check a robot’s alibi."
+  ]
+ },
+ {
+  "id": "L05",
+  "scene": "sabotage",
+  "speed": 0.86,
+  "say": "Then the signals fail.",
+  "cap": [
+   "Then the signals fail."
+  ]
+ },
+ {
+  "id": "L06",
+  "scene": "sightings",
+  "say": "A route goes dark. And two robots were seen nearby.",
+  "cap": [
+   "A route goes dark.",
+   "And two robots were seen nearby."
+  ]
+ },
+ {
+  "id": "L07",
+  "scene": "meeting",
+  "say": "You get one emergency meeting. One vote.",
+  "cap": [
+   "You get one emergency meeting. One vote."
+  ]
+ },
+ {
+  "id": "L08",
+  "scene": "twist",
+  "speed": 0.84,
+  "say": "Choose wrong...",
+  "cap": [
+   "Choose wrong…"
+  ]
+ },
+ {
+  "id": "L08B",
+  "scene": "twist",
+  "speed": 0.86,
+  "say": "and the saboteur gets away with it.",
+  "cap": [
+   "and the saboteur gets away with it."
+  ]
+ },
+ {
+  "id": "L09",
+  "scene": "title",
+  "say": "Junction. Saboteur Express.",
+  "cap": [
+   "Junction: Saboteur Express."
+  ]
+ },
+ {
+  "id": "L10",
+  "scene": "title",
+  "say": "Pick a quick game. Trust no robot.",
+  "cap": [
+   "Pick a Quick game. Trust no robot."
+  ]
+ }
+]

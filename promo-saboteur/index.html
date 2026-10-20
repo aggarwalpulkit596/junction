@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Junction 3D: Saboteur Express — trailer</title>
+<link rel="icon" href="data:,">
+<style>
+  @font-face { font-family: "Fredoka"; src: url("assets/fonts/Fredoka.ttf") format("truetype"); font-weight: 300 700; }
+  @font-face { font-family: "Nunito"; src: url("assets/fonts/Nunito.ttf") format("truetype"); font-weight: 200 1000; }
+  /*__STYLE__*/
+  :root { --bg: #f3ede1; --ink: #1c1d33; --muted: #6d675d; --yellow: #ffb020; --line: rgba(20,20,19,.14); color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #12110f; --ink: #f5f1e8; --muted: #a39c8f; --line: rgba(255,255,255,.14); color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #12110f; --ink: #f5f1e8; --muted: #a39c8f; --line: rgba(255,255,255,.14); color-scheme: dark; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 600 15px/1.4 "Nunito", system-ui, sans-serif; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; padding: 16px; gap: 12px; }
+  .stage-wrap { position: relative; height: min(calc(100vh - 150px), 1920px); aspect-ratio: 9 / 16; max-width: 100%; }
+  .stage-wrap:fullscreen { height: 100vh; width: auto; margin: auto; background: #000; }
+  canvas { width: 100%; height: 100%; display: block; border-radius: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.25); cursor: pointer; background: #05061a; }
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
+  .bar { display: flex; gap: 8px; align-items: center; width: min(100%, 720px); flex-wrap: wrap; justify-content: center; }
+  button { font: 700 14px "Nunito", system-ui, sans-serif; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  button:hover { border-color: var(--ink); }
+  button.primary { background: var(--yellow); color: #1c1d33; border-color: transparent; min-width: 84px; }
+  button.on, #chapters button.active { background: var(--ink); color: var(--bg); }
+  #scrub { flex: 1 1 260px; accent-color: #14b8a6; }
+  #time { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 108px; text-align: right; }
+  #chapters { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: min(100%, 720px); }
+  #chapters button { font-size: 12px; padding: 4px 10px; }
+  .hint { color: var(--muted); font-size: 12px; text-align: center; }
+  body.render { padding: 0; margin: 0; display: block; background: #000; }
+  body.render .stage-wrap { height: auto; width: 1080px; }
+  body.render canvas { width: 1080px; height: 1920px; border-radius: 0; box-shadow: none; }
+  body.render .ui { display: none; }
+</style>
+</head>
+<body>
+<div class="stage-wrap">
+  <canvas id="stage" width="1080" height="1920" aria-label="Junction: Saboteur Express trailer"></canvas>
+  <div id="loading" class="ui">Loading…</div>
+</div>
+<div class="bar ui">
+  <button id="play" class="primary" aria-pressed="false">Play</button>
+  <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Seek">
+  <span id="time">0:00.0</span>
+</div>
+<div class="bar ui">
+  <button id="restart">Restart</button>
+  <button id="cc" aria-pressed="true" title="Captions (C)">CC</button>
+  <button id="mute">Mute</button>
+  <button id="full">Fullscreen</button>
+</div>
+<div id="chapters" class="ui"></div>
+<p class="hint ui">Space play/pause · ←/→ one frame (Shift: 1 s) · C captions · M mute · F fullscreen</p>
+<audio id="audio" preload="auto" src="audio/master/saboteur-trailer-mix.m4a"></audio>
+<video id="footage" muted playsinline preload="auto" src="assets/footage.mp4" hidden></video>
+<script>/*__ASSETS__*/window.ASSETS = { task: 'assets/screens/1_task.jpg', reward: 'assets/screens/2_reward.jpg', alibi: 'assets/screens/3_alibi.jpg', hud: 'assets/screens/4_hud.jpg', log: 'assets/screens/5_log.jpg', meeting: 'assets/screens/6_meeting.jpg', verdict: 'assets/screens/7_verdict.jpg', end: 'assets/screens/8_end.jpg' };</script>
+<script src="src/timeline.js"></script>
+<script src="src/footage_meta.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/scenes.js"></script>
+<script src="src/player.js"></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+[
+ {
+  "id": "L01",
+  "scene": "hook",
+  "say": "Edinburgh to Athens. Twenty trains. And three robots, racing you for the track.",
+  "cap": [
+   "Edinburgh to Athens. Twenty trains.",
+   "And three robots, racing you for the track."
+  ]
+ },
+ {
+  "id": "L02",
+  "scene": "title",
+  "say": "This is Junction: Europe. A rail race across twenty-eight cities.",
+  "cap": [
+   "This is Junction: Europe.",
+   "A rail race across 28 cities."
+  ]
+ },
+ {
+  "id": "L03",
+  "scene": "cards",
+  "say": "Draw two train cards a turn. Locomotives are wild.",
+  "cap": [
+   "Draw two train cards a turn.",
+   "Locomotives are wild."
+  ]
+ },
+ {
+  "id": "L04",
+  "scene": "claim",
+  "say": "Match a route's colour, and the line is yours.",
+  "cap": [
+   "Match a route's colour, and the line is yours."
+  ]
+ },
+ {
+  "id": "L05",
+  "scene": "tunnel",
+  "say": "Ferries need a locomotive. Tunnels flip three cards, and every match costs you more.",
+  "cap": [
+   "Ferries need a locomotive.",
+   "Tunnels flip three cards,",
+   "and every match costs you more."
+  ]
+ },
+ {
+  "id": "L06",
+  "scene": "rivals",
+  "say": "Rose, Sandy and Mint want those routes too. Blocked? Build a station, and borrow their line.",
+  "cap": [
+   "Rose, Sandy and Mint want those routes too.",
+   "Blocked? Build a station,",
+   "and borrow their line."
+  ]
+ },
+ {
+  "id": "L07",
+  "scene": "postcards",
+  "say": "Every city has a landmark postcard. Connect it, and it's stamped.",
+  "cap": [
+   "Every city has a landmark postcard.",
+   "Connect it, and it's stamped."
+  ]
+ },
+ {
+  "id": "L08",
+  "scene": "score",
+  "say": "Finish your tickets, build the longest line, and take the continent.",
+  "cap": [
+   "Finish your tickets, build the longest line,",
+   "and take the continent."
+  ]
+ },
+ {
+  "id": "L09",
+  "scene": "end",
+  "say": "Junction: Europe.",
+  "cap": [
+   "Junction: Europe."
+  ]
+ },
+ {
+  "id": "L10",
+  "scene": "end",
+  "say": "Pick a quick game. About ten minutes, right in your browser.",
+  "cap": [
+   "Pick a Quick game.",
+   "About 10 minutes, right in your browser."
+  ]
+ }
+]

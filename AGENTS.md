@@ -33,6 +33,11 @@ Do not use the original board game's name, board art, or trade dress, or art fro
 - `promo-saboteur/`: the dramatic "Trust No Robot" trailer for `junction3d-saboteur.html`, built from real 3D footage of the game
   (`tools/shoot.mjs`) plus the canvas overlay pipeline from `promo/`. See `promo-saboteur/README.md`.
 - `junction3d.html`: the walk-around 3D version (Three.js r160 from jsDelivr, so it needs a connection). **Generated**: don't hand-edit it.
+  It is also the **online multiplayer** client (see "Online" below).
+- `mp/`, `worker/`, `wrangler.toml`, `site/`: online play on Cloudflare (Worker + one Durable Object per room). See "Online" below
+  and `docs/ONLINE.md`.
+- `docs/ITERATIONS.md` + `CHANGELOG.md`: the project history. Every change is an iteration: commit messages start with
+  `Iteration N:` and each iteration gets a section in `docs/ITERATIONS.md` (what, why, how it was checked).
 - `tools3d/`: `junction3d.template.html` (the 3D world, robots, input, HUD, walking bots), `build.py` (splices the rules engine from `junction.html` into the template), `sim.mjs` (headless bot-vs-bot check).
 - `promo/`: the "One Ticket" promo film (vanilla JS canvas animation, narration, music, exports). See `promo/README.md`.
 - `video/record.py`: renders a 1080x1920 gameplay teaser (`video/junction_teaser.mp4`) with Playwright + ffmpeg.
@@ -65,7 +70,25 @@ Do not use the original board game's name, board art, or trade dress, or art fro
   (follow camera, walkable mask, walk cycle); its sprites and ship map are Innersloth's and must not be copied.
 
 ## Modes
-Quick = 20 trains, Long = 30 trains (the board holds ~130 trains of routes, so 45 would never end).
+- 2D games and Saboteur (2D and 3D): Quick = 20 trains, Long = 30 trains.
+- Junction 3D (solo and online): **Blitz** = 18 trains (5–10 min online: 25 s turns, 8 min clock) and **Classic** = 40 trains
+  (~30 min online: 45 s turns, 28 min clock; fills ~48 of 50 routes). Online modes live in `MODES` in `mp/engine.template.js`.
+
+## Online (Junction 3D multiplayer)
+- **Server-authoritative.** `worker/index.js`: the Worker routes `POST /api/rooms`, `GET /api/rooms/:code`, `/api/rooms/:code/ws` and serves
+  `public/` for everything else. `Room` is a SQLite-backed Durable Object with hibernating WebSockets. It stores one key `room`
+  (`{code, mode, phase, seats:[{name,token}], hostToken, game}`) and paces robots with alarms.
+- **Engine.** `mp/engine.template.js` → `worker/rules.gen.js` (**generated** by `node mp/build.mjs`, which splices junction.html's data,
+  payment, `wanted` and scoring slices in, just like `build.py`). `act(seat,a,now)` validates every action; `botNext` returns a robot's
+  action (also used for timed-out or away humans); `tick(now)`/`nextWake(now)` run the clock; `view(seat)` hides other hands and tickets and
+  rotates seats so the viewer is player 0. Time is always passed in, so `mp/sim.mjs` runs on a virtual clock.
+- **Client.** The `ONLINE` section of `tools3d/junction3d.template.html` (`NET`, `netApply`, `netLobby`, …). Each `sync` rebuilds `S` from
+  the view, so the existing HUD and 3D code work unchanged. `takeMarket`/`startClaim`/`confirmTickets`/… are wrapped to send actions
+  when `NET.on`. `ONLINE_OK=false` in the saboteur build (`make_saboteur_template.py` flips it and restores Quick/Long).
+- **Commands.** `npm run build` (3D pages + engine + `public/`), `npm run sim` (balance + `mp/timeout-check.mjs`), `npm run dev:fast`
+  (`wrangler dev` with `BOT_PACE=0.15`) then `npm run test:online` (`mp/e2e.mjs`, real Chrome, about 1 min), `npm run deploy` (needs `wrangler login`).
+- **Numbers to keep.** `mp/sim.mjs 200 blitz 1` ≈ 16.6 rounds, 4.4 min; `classic 1` ≈ 38.9 rounds, 11 min; with 4 humans both hit their clocks
+  (≈ 8.8 and 29 min). No stalls, no refused robot actions.
 
 ## Testing
 Bots can play every seat headlessly: stub `document`, override `setTimeout` to run immediately, loop
@@ -84,4 +107,5 @@ overlays captions, screenshots key moments, and stitches them with ffmpeg (27s, 
 ## Ideas for next steps
 - Add music/SFX to the teaser; make a 16:9 cut for YouTube.
 - Split into modules (rules engine / bots / UI) with unit tests for the rules engine.
-- Bots that use stations and block rivals; online multiplayer with a server-authoritative deck.
+- Bots that use stations and block rivals.
+- Saboteur Express online (hidden human saboteur); proximity checks for online actions; spectators.

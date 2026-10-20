@@ -5,6 +5,7 @@ Short version of [`docs/ITERATIONS.md`](docs/ITERATIONS.md). Newest first.
 ## 1.0.0 — Online multiplayer (2026-10-21)
 
 ### Added
+- Live at https://junction.aggarwalpulkit596.workers.dev
 - Online play in Junction 3D for up to 4 people, with robots in any empty seat. Create a room, share the 4-letter code
   or link, pick a length, play. Reload to get your seat back; join mid-game to take over a robot.
 - Two game lengths: **Blitz** (5–10 min: 18 trains, 25 s turns, 8 min clock) and **Classic** (~30 min: 40 trains,

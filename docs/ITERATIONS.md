@@ -109,6 +109,18 @@ Quick/Long modes, because the server does not know the saboteur rules yet.
 
 ---
 
+## Iteration 4: live on Cloudflare
+
+- Deployed with `npm run deploy` to **https://junction.aggarwalpulkit596.workers.dev**: one Worker with the static
+  site and the `Room` Durable Object, on the Workers Free plan.
+- Checked by running `mp/e2e.mjs` against the live site at normal robot speed (no `BOT_PACE`). It covered create, join,
+  reload, a mid-game join, a whole Blitz game (19 rounds, about 1.5 minutes with instant-acting test players),
+  the same board for everyone, and rematch. All checks pass.
+- To redeploy: `npm run deploy`, or add the `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` secrets on GitHub so
+  every push to `main` deploys.
+
+---
+
 ## Ideas for the next iterations
 
 - Saboteur Express online: a human could be the secret saboteur. The server already hides hands; it would also hide

@@ -4,6 +4,8 @@ A walk-around 3D rail game across Europe. Walk your Sprocket robot between 28 ci
 claim routes and finish your destination tickets. Play **online with up to 4 friends** (robots fill any empty seat), or
 solo against three robots.
 
+**Play now: https://junction.aggarwalpulkit596.workers.dev** (3D game: `/junction3d.html`)
+
 Original name, map and cartoon art. No build step for the games themselves: each one is a single HTML file.
 
 | Game | File | Online |

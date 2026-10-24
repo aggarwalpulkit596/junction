@@ -4,7 +4,9 @@
 
 | File | What it is |
 |---|---|
-| `mp/engine.template.js` | The online rules engine (setup, actions, turn flow, bots, clock, per-seat views). Edit this. |
+| `mp/engine.template.js` | The Europe online rules engine (setup, actions, turn flow, bots, clock, per-seat views). Edit this. |
+| `metro/rules.js` | The Delhi Metro engine, same shape (`makeEngine`, `MODES`, `BOT_NAMES`). Imported by the Worker as is and inlined into `metro.html`. |
+| `metro/metro.template.html` | The Delhi Metro client (3D board + phone HUD); `metro.html` is generated from it. |
 | `mp/build.mjs` | Splices slices of `junction.html` into the template → `worker/rules.gen.js`; assembles `public/`. |
 | `worker/index.js` | Cloudflare Worker (routing, room creation) and the `Room` Durable Object (one per room). |
 | `tools3d/junction3d.template.html` | The 3D client. The `ONLINE` section is the multiplayer client. |
@@ -22,14 +24,28 @@
 It fails loudly if a marker disappears. The engine adds what the 2D page does in its UI: the market with cities (cards
 float above cities as in 3D), the turn flow, the game clock, and a bot that returns *actions* instead of mutating state.
 
+## Two games, one Room
+
+A room is created for one game, `europe` (Junction 3D) or `metro` (Delhi Metro), and keeps it: `POST /api/rooms {game, mode}`.
+The `Room` object picks the matching engine (`GAMES[gameId].makeEngine()`), stores `gameId` in the room and reports it in
+`GET /api/rooms/:code` and in every `sync`'s `room.game`. Each page joins rooms of its own game and sends you to the other
+page when a code belongs to the other game. The landing page's code box peeks first and opens the right page.
+
 ## Modes
 
-Defined once in `MODES` (engine template). The server sends them to the lobby; the client only keeps labels.
+Defined once in each engine's `MODES`. The server sends them to the lobby; the client only keeps labels.
 
 | | trains | turn | tickets phase | clock | starting tickets | bot speed |
 |---|---|---|---|---|---|---|
 | `blitz` | 18 | 25 s | 30 s | 8 min | 3 short, keep ≥ 1 | 1.5× |
 | `classic` | 40 | 45 s | 60 s | 28 min | 1 long + 3 short, keep ≥ 2 | 1× |
+
+Delhi Metro:
+
+| | trains | turn | tickets phase | clock | starting tickets |
+|---|---|---|---|---|---|
+| `rush` | 16 | 25 s | 30 s | 10 min | 3 short, keep ≥ 1 |
+| `full` | 24 | 40 s | 50 s | 25 min | 1 long + 3 short, keep ≥ 2 |
 
 The final round starts when someone has ≤ 2 trains, every route is taken, or the clock runs out.
 
@@ -58,7 +74,7 @@ Client → server
 | `{t:'join', name, token?}` | first message on every connection |
 | `{t:'mode', mode}` | host, lobby |
 | `{t:'start'}` | host, lobby |
-| `{t:'act', a}` | `a` = `{t:'market',i}` `{t:'deck'}` `{t:'tickets'}` `{t:'keep',idx:[…]}` `{t:'claim',ri,o:{c,n,w}}` `{t:'tunnel',go}` `{t:'station',city,o}` |
+| `{t:'act', a}` | Europe: `a` = `{t:'market',i}` `{t:'deck'}` `{t:'tickets'}` `{t:'keep',idx:[…]}` `{t:'claim',ri,o:{c,n,w}}` `{t:'tunnel',go}` `{t:'station',city,o}`. Metro: `{t:'market',i}` `{t:'deck'}` `{t:'tickets'}` `{t:'keep',idx}` `{t:'drive',si,o:{c,n,w,e}}` (`e` = the extra pass of a depot run, or null) `{t:'jam',si}` |
 | `{t:'pos', x, z}` | your robot moved (relayed to others, ~10/s max) |
 | `{t:'emote', e}` | 👋 👍 😮 😅 🔥 GG |
 | `{t:'again'}` | host, after game over |
@@ -73,6 +89,9 @@ Server → client
 | `{t:'emote', s, e, name}` | an emote |
 | `{t:'err', msg}` | your action was refused (a fresh sync follows) |
 | `{t:'bye', msg, keep?}` | you're out of the room (`keep`: you opened it in another tab) |
+
+Metro events in `ev`: `drive {s, si, path:[stations], depot}` (the client animates the train along `path`), `pick`, `deck`,
+`tix`, `jam {s, si}`, `fail {si}`, `turn`, `final`, `over`.
 
 ## What a view hides
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Junction</title>
-<meta name="description" content="Junction: a walk-around 3D rail game across Europe. Play online with friends or against Sprocket robots.">
+<meta name="description" content="Junction: quick route-building rail games. Drive the Delhi Metro on your phone, or walk Europe in 3D. Play online with friends or against robots.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +35,7 @@ h1{font-size:40px;font-weight:700;line-height:1}
 .btn:focus-visible,input:focus-visible,.card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 form{display:flex;gap:8px;flex:1;min-width:230px}
 input{font:inherit;font-family:'Fredoka';font-size:18px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);background:var(--card);border:2.5px solid var(--outline);border-radius:13px;padding:10px 12px;width:100%;min-width:0}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .card{background:var(--panel);border:2.5px solid var(--outline);border-radius:16px;box-shadow:0 4px 0 var(--outline);padding:14px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:4px}
 .card b{font-family:'Fredoka';font-size:18px;font-weight:600}
 .card span{font-size:13.5px;color:var(--muted)}
@@ -47,29 +47,32 @@ footer a{color:inherit}
 </head>
 <body>
 <div class="wrap">
-  <header><img src="favicon.svg" alt=""><div><h1>Junction</h1><div class="sub">Rails across Europe, built by robots and their friends</div></div></header>
+  <header><img src="favicon.svg" alt=""><div><h1>Junction</h1><div class="sub">Route-building rail games for your phone, with friends or robots</div></div></header>
   <section class="hero">
-    <h2>Walk Europe. Build the best railway. Bring friends.</h2>
-    <p>Junction 3D is a walk-around rail game. Grab floating train cards, claim routes between 28 cities and finish your destination tickets. Play online with up to 4 people, and Sprocket robots fill any empty seats.</p>
+    <h2>Drive the Delhi Metro. Claim the lines. Finish your tickets.</h2>
+    <p>Junction: Delhi Metro is a 5-minute route-building game made for phones. Take line passes, drive your train along the Red, Yellow, Blue, Pink and other lines, connect your destination stations, and watch out for signal failures and jams. Play solo against three robots, or online with up to 4 friends.</p>
     <div class="modes">
-      <div class="mode"><b>Blitz · 5–10 min</b><span>18 trains, 25 second turns, an 8 minute clock</span></div>
-      <div class="mode"><b>Classic · about 30 min</b><span>40 trains, 45 second turns, fills the map</span></div>
+      <div class="mode"><b>Rush Hour · 5–10 min</b><span>16 trains, 25 second turns, a 10 minute clock</span></div>
+      <div class="mode"><b>Full Line · about 15 min</b><span>24 trains, 40 second turns, long tickets</span></div>
     </div>
     <div class="row">
-      <a class="btn primary" href="junction3d.html">Play Junction 3D</a>
+      <a class="btn primary" href="metro.html">Play Delhi Metro</a>
       <form id="join" autocomplete="off"><input id="code" maxlength="4" placeholder="CODE" aria-label="Room code" spellcheck="false"><button class="btn" type="submit">Join room</button></form>
     </div>
   </section>
   <h3>More ways to play</h3>
   <div class="grid">
+    <a class="card" href="junction3d.html"><b>Junction 3D: Europe</b><span>Walk a 3D map of Europe, grab floating cards, claim routes. Online rooms too.</span></a>
     <a class="card" href="junction.html"><b>Junction 2D</b><span>The original board on one screen. Quick games against three robots.</span></a>
     <a class="card" href="junction-saboteur.html"><b>Saboteur Express</b><span>One robot is secretly sabotaging the rails. Find it.</span></a>
     <a class="card" href="junction3d-saboteur.html"><b>Saboteur Express 3D</b><span>Walk the map, witness sabotage, call meetings, vote robots out.</span></a>
   </div>
-  <footer>An original game with an original map and art. Source on <a href="https://github.com/aggarwalpulkit596/junction">GitHub</a>.</footer>
+  <footer>Original games with original maps and art. Delhi Metro station facts from public sources (reference: Wikimedia Commons, PlaneMad, CC BY-SA). Source on <a href="https://github.com/aggarwalpulkit596/junction">GitHub</a>.</footer>
 </div>
 <script>
-document.getElementById('join').addEventListener('submit',e=>{e.preventDefault();const c=document.getElementById('code').value.toUpperCase().replace(/[^A-Z]/g,'');if(c.length===4)location.href='junction3d.html?room='+c;else document.getElementById('code').focus()});
+document.getElementById('join').addEventListener('submit',async e=>{e.preventDefault();const c=document.getElementById('code').value.toUpperCase().replace(/[^A-Z]/g,'');if(c.length!==4){document.getElementById('code').focus();return}
+  let page='metro.html';try{const j=await (await fetch('/api/rooms/'+c)).json();if(j&&j.game==='europe')page='junction3d.html'}catch(x){}
+  location.href=page+'?room='+c});
 </script>
 </body>
 </html>

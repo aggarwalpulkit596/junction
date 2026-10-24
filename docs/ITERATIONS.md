@@ -121,8 +121,56 @@ Quick/Long modes, because the server does not know the saboteur rules yet.
 
 ---
 
+## Iteration 5: Junction: Delhi Metro (3D, phone-first)
+
+**Goal.** A game people can actually play on a phone, and come back to. The Europe games were hard to play on small
+screens (walking a robot around a 3D map, fanned cards, long turns). The new game keeps the route-building heart but is
+built for one thumb.
+
+**Design decisions (made with the game's creator).**
+
+- **The Delhi Metro is the board.** 49 stations (every interchange plus the terminals people know), 66 segments of 1–4
+  cars, one per stretch of a real line. The lines are already colour-coded, so the *line colours are the pass colours*:
+  Red, Yellow, Blue, Green, Violet, Pink, Magenta, Orange, plus the Smart Card as the wild. Grey Line, Aqua Line and
+  Rapid Metro take any one colour. Station names and line facts are public; the schematic and the 3D city are ours
+  (reference for checking the network: Wikimedia Commons, "Delhi metro rail network.svg", PlaneMad, CC BY-SA 2.5).
+- **You drive.** A turn is one tap: take 2 passes, or drive one segment that touches your network. A segment your
+  network doesn't reach is a *depot run* and costs one extra pass of any kind, so nobody can be boxed in and the choice
+  space stays small. Your train animates along your own track to the new segment.
+- **Light disruption instead of the hidden saboteur.** Meetings and votes were the parts that didn't fit a phone.
+  Instead: a *Signal Failure* closes a random free segment every third round, and every player has one *Jam* (close a
+  free segment for 2 rounds). Mischief, no extra screens.
+- **3D, tilted board + ride-along.** The creator asked to keep the game 3D ("that's what makes it a mobile game rather
+  than a board game"). The board is a toy Delhi (Yamuna, pastel blocks, elevated viaducts with car slots), seen from a
+  tilted camera you drag, pinch and turn. When you drive, the camera swoops down and rides behind your train, then goes
+  back. Labels keep a readable size at any zoom. Wide screens put the board beside the controls.
+- **Online from day one.** Rooms, codes, robots in empty seats, reconnect, mid-game takeover, rematch: the same
+  Durable Object as Junction 3D. Rooms now carry a `game` (europe or metro); each page joins only its own game's rooms
+  and sends you to the right page otherwise.
+- **One engine, everywhere.** `metro/rules.js` is a plain ES module with no DOM. The Worker imports it; `mp/build.mjs`
+  inlines it into `metro.html` (exports stripped) so solo play in the browser runs the identical engine against three
+  robots, with no turn timer. The client renders only from the engine's per-seat *view*, so solo and online share every
+  screen.
+
+**Modes.** Rush Hour: 16 trains, 25 s turns, 10 min clock. Full Line: 24 trains, 40 s turns, 25 min clock, long tickets.
+
+**How it was checked.**
+
+- `node mp/metro-sim.mjs 200 rush 1`: 200 games, 0 stalls, 0 refused actions, 15.7 rounds, median 3.7 min with
+  robot-paced seats; with 4 human-paced seats 9.6 min (11% reach the 10-minute clock). `full 1`: 23.7 rounds; ~14 min
+  with 4 humans, never hits the clock. Jams ≈ 3.9 and signal failures ≈ 4.6 per Rush game; 45% of tickets completed.
+- `node mp/timeout-check.mjs`: idle, away, returning and taken-over seats never stall either game.
+- `node mp/metro-e2e.mjs` against `wrangler dev`: two real browsers create and join a metro room, start, play a whole
+  game through the page's own functions, one reloads and gets its seat back, a third joins mid-game, both see the same
+  board, final scores, rematch. All checks pass.
+- Headless-Chrome screenshots at 400×860 and 1280×800 for the layout.
+
+---
+
 ## Ideas for the next iterations
 
+- Delhi Metro: landmarks on the board (India Gate, Qutub Minar, Lotus Temple), sound, a share-your-result card,
+  a "public rooms" list so strangers can play.
 - Saboteur Express online: a human could be the secret saboteur. The server already hides hands; it would also hide
   the role, run meetings, and collect votes.
 - Check that a player is near a floating card or route before accepting the action (positions are cosmetic today).

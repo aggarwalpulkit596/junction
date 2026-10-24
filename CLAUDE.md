@@ -1,13 +1,26 @@
-# Junction: Europe
+# Junction
 
-A single-file browser rail game: the Europe-edition ruleset of a classic route-building board game, with an
-original name, map, and cartoon art. Four players: the human ("You") and three bots (Rose, Sandy, Mint),
-drawn as original hex-bodied "Sprocket" robots.
+Browser rail games with original names, maps and art. The lead game is now **Junction: Delhi Metro** (`metro.html`, 3D,
+phone-first). The older games are the Europe-edition ruleset of a classic route-building board game (2D, 3D, Saboteur).
+Four players: the human ("You") and three bots (Rose, Sandy, Mint), drawn as original hex-bodied "Sprocket" robots.
 
 Do not use the original board game's name, board art, or trade dress, or art from Among Us. Keep everything original.
 
 ## Files
-- `junction.html`: the whole game (HTML + CSS + JS, no build step). Open it in a browser.
+- **`metro/rules.js`**: the Delhi Metro rules engine, a plain ES module with no DOM (map data `STATION_DATA`/`SEG_DATA`, `TICKETS`
+  generated from shortest paths, `MODES` rush/full, `makeEngine()` with `act`/`tick`/`nextWake`/`view`/`botNext`). The Worker imports
+  it directly; `mp/build.mjs` inlines it (exports stripped) at `/*@@RULES@@*/` in `metro/metro.template.html` → **`metro.html` (generated)**.
+  Rules in one breath: take 2 passes or **drive** one free segment touching your network (`payOptions`, Smart Card = wild, grey/aqua/rapid
+  segments take any one colour); a non-touching segment is a **depot run** (+1 pass of any kind, `drivePath` returns `depot`); segments score
+  `PTS` 1/2/4/7; tickets ±; longest line +10; final round at ≤2 trains. Disruption: `S.fail` (Signal Failure every `FAIL_EVERY`=3 rounds)
+  and one `jam` per player (`JAM_ROUNDS`=2). Bots: `wanted` (Dijkstra over unfinished tickets), `bestDrive`, `botJam`, `botNext`.
+- **`metro/metro.template.html`**: the client. Renders only from a view `V` (local engine in solo via `E.tick(Date.now())` every 120 ms,
+  or the server's `sync` online), so solo and online share every screen. Three.js r160 (jsDelivr) 3D board: `buildMap` (viaduct ribbons,
+  car slots, station cylinders, label sprites that rescale with zoom), `CAM` (drag pan, pinch/wheel zoom, two-finger or shift-drag turn,
+  `CAM.ride` follows your train during `animateDrive`), raycast taps → `tapSeg`/`tapStation`. HUD: market, chips, Jam button, sheets.
+  Wide screens (≥900px) put the board beside the controls. Test hooks on `window.J` (`V`, `send`, `newSolo`, `keepAll`, `payOptionsV`…).
+- `mp/metro-sim.mjs` (balance, virtual clock), `mp/metro-e2e.mjs` (two real browsers against `wrangler dev`).
+- `junction.html`: the 2D Europe game (HTML + CSS + JS, no build step). Open it in a browser.
 - `junction-saboteur.html`: "Saboteur Express", the 2D Europe game plus a hidden-saboteur layer (single file, no build step).
   Same rules and bots as `junction.html`, plus: `S.sab` (Rose, Sandy or Mint) runs `sabotage()` on its turn every third round, which blocks
   (`r.blocked`, 3 → 0 as rounds wrap) an unclaimed route at its city and prefers routes in `wanted(H())`. `payOptions` refuses blocked routes and
@@ -70,14 +83,17 @@ Do not use the original board game's name, board art, or trade dress, or art fro
   (follow camera, walkable mask, walk cycle); its sprites and ship map are Innersloth's and must not be copied.
 
 ## Modes
+- Delhi Metro: **Rush Hour** = 16 trains (25 s turns, 10 min clock online) and **Full Line** = 24 trains (40 s turns, 25 min clock, long tickets).
+  Solo has no timers. `mp/metro-sim.mjs 200 rush 1` ≈ 15.7 rounds, 3.7 min; with 4 humans ≈ 9.6 min; `full` ≈ 23.7 rounds, ≈ 14 min with 4 humans.
 - 2D games and Saboteur (2D and 3D): Quick = 20 trains, Long = 30 trains.
 - Junction 3D (solo and online): **Blitz** = 18 trains (5–10 min online: 25 s turns, 8 min clock) and **Classic** = 40 trains
   (~30 min online: 45 s turns, 28 min clock; fills ~48 of 50 routes). Online modes live in `MODES` in `mp/engine.template.js`.
 
-## Online (Junction 3D multiplayer)
-- **Server-authoritative.** `worker/index.js`: the Worker routes `POST /api/rooms`, `GET /api/rooms/:code`, `/api/rooms/:code/ws` and serves
+## Online (Junction 3D and Delhi Metro multiplayer)
+- **Server-authoritative.** `worker/index.js`: the Worker routes `POST /api/rooms {game, mode}`, `GET /api/rooms/:code`, `/api/rooms/:code/ws` and serves
   `public/` for everything else. `Room` is a SQLite-backed Durable Object with hibernating WebSockets. It stores one key `room`
-  (`{code, mode, phase, seats:[{name,token}], hostToken, game}`) and paces robots with alarms.
+  (`{code, gameId, mode, phase, seats:[{name,token}], hostToken, game}`) and paces robots with alarms. `GAMES={europe, metro}`: the room's
+  `gameId` picks the engine (`setGame`); both engines expose the same API (`newGame, act, tick, nextWake, view, rotEv, botNext, load, setAway, takeOver, toBot`).
 - **Engine.** `mp/engine.template.js` → `worker/rules.gen.js` (**generated** by `node mp/build.mjs`, which splices junction.html's data,
   payment, `wanted` and scoring slices in, just like `build.py`). `act(seat,a,now)` validates every action; `botNext` returns a robot's
   action (also used for timed-out or away humans); `tick(now)`/`nextWake(now)` run the clock; `view(seat)` hides other hands and tickets and
@@ -85,8 +101,8 @@ Do not use the original board game's name, board art, or trade dress, or art fro
 - **Client.** The `ONLINE` section of `tools3d/junction3d.template.html` (`NET`, `netApply`, `netLobby`, …). Each `sync` rebuilds `S` from
   the view, so the existing HUD and 3D code work unchanged. `takeMarket`/`startClaim`/`confirmTickets`/… are wrapped to send actions
   when `NET.on`. `ONLINE_OK=false` in the saboteur build (`make_saboteur_template.py` flips it and restores Quick/Long).
-- **Commands.** `npm run build` (3D pages + engine + `public/`), `npm run sim` (balance + `mp/timeout-check.mjs`), `npm run dev:fast`
-  (`wrangler dev` with `BOT_PACE=0.15`) then `npm run test:online` (`mp/e2e.mjs`, real Chrome, about 1 min), `npm run deploy` (needs `wrangler login`).
+- **Commands.** `npm run build` (3D pages + Europe engine + `metro.html` + `public/`), `npm run sim` (both engines: balance + `mp/timeout-check.mjs`),
+  `npm run dev:fast` (`wrangler dev` with `BOT_PACE=0.15`) then `npm run test:online` (`mp/metro-e2e.mjs` then `mp/e2e.mjs`, real Chrome), `npm run deploy` (needs `wrangler login`).
 - **Numbers to keep.** `mp/sim.mjs 200 blitz 1` ≈ 16.6 rounds, 4.4 min; `classic 1` ≈ 38.9 rounds, 11 min; with 4 humans both hit their clocks
   (≈ 8.8 and 29 min). No stalls, no refused robot actions.
 

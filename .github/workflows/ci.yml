@@ -15,6 +15,6 @@ jobs:
       - name: Build (3D pages, server engine, site)
         run: npm run build
       - name: Generated files are committed and up to date
-        run: git diff --exit-code -- junction3d.html junction3d-saboteur.html tools3d/junction3d-saboteur.template.html worker/rules.gen.js
+        run: git diff --exit-code -- junction3d.html junction3d-saboteur.html tools3d/junction3d-saboteur.template.html worker/rules.gen.js metro.html
       - name: Online engine balance and no-stall checks
         run: npm run sim

@@ -1,5 +1,5 @@
 // Junction online: Cloudflare Worker + one Durable Object per room.
-//   POST /api/rooms {mode}        -> {code}            create a room (4-letter code)
+//   POST /api/rooms {game, mode}  -> {code}            create a room (4-letter code); game = 'europe' (Junction 3D) or 'metro'
 //   GET  /api/rooms/:code         -> {exists, phase,…}  peek before joining
 //   GET  /api/rooms/:code/ws      -> WebSocket          play (protocol below)
 //   anything else                 -> the static site in public/
@@ -12,7 +12,14 @@
 // The server owns the deck, hands and tickets; clients only send intentions. Bots (and humans whose turn timer
 // runs out, or who drop) are played by the same engine, paced with Durable Object alarms.
 import { DurableObject } from 'cloudflare:workers';
-import { makeEngine, MODES, BOT_NAMES, MAX_SEATS } from './rules.gen.js';
+import * as EUROPE from './rules.gen.js';
+import * as METRO from '../metro/rules.js';
+
+// Two games share the Worker and the Room code: the Europe 3D game and Junction: Delhi Metro. A room is created
+// for one game and keeps it; each page only joins rooms of its own game (the /info peek says which).
+const GAMES = { europe: EUROPE, metro: METRO };
+const gameOf = (g) => (GAMES[g] ? g : 'europe');
+const MAX_SEATS = 4;
 
 const CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const CODE_RE = /^[A-HJ-NP-Z]{4}$/;
@@ -20,7 +27,7 @@ const IDLE_MS = 30 * 60 * 1000;   // a room nobody has touched for this long is 
 const EMOTES = ['👋', '👍', '😮', '😅', '🔥', 'GG'];
 const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 const cleanName = (s) => (String(s || '').normalize('NFC').replace(/[^\p{L}\p{N} _.-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 14)) || 'Player';
-const modeInfo = Object.fromEntries(Object.values(MODES).map((m) => [m.id, { name: m.name, blurb: m.blurb, trains: m.trains, turnSec: m.turnSec, clockMin: m.clockMin }]));
+const modeInfoOf = (game) => Object.fromEntries(Object.values(GAMES[gameOf(game)].MODES).map((m) => [m.id, { name: m.name, blurb: m.blurb, trains: m.trains, turnSec: m.turnSec, clockMin: m.clockMin }]));
 
 export default {
   async fetch(req, env) {
@@ -32,14 +39,16 @@ export default {
     }
     const stubFor = (code) => env.ROOMS.get(env.ROOMS.idFromName(code));
     if (!m[1]) {
-      if (req.method !== 'POST') return json({ modes: modeInfo });
+      if (req.method !== 'POST') return json({ games: Object.fromEntries(Object.keys(GAMES).map((g) => [g, { modes: modeInfoOf(g) }])), modes: modeInfoOf('europe') });
       let body = {};
       try { body = await req.json(); } catch {}
-      const mode = MODES[body.mode] ? body.mode : 'blitz';
+      const game = gameOf(body.game);
+      const MODES = GAMES[game].MODES;
+      const mode = MODES[body.mode] ? body.mode : Object.keys(MODES)[0];
       for (let k = 0; k < 6; k++) {
         const code = Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => CODE_ABC[b % CODE_ABC.length]).join('');
-        const r = await stubFor(code).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, mode }) });
-        if (r.status === 201) return json({ code, mode });
+        const r = await stubFor(code).fetch('https://room/init', { method: 'POST', body: JSON.stringify({ code, mode, game }) });
+        if (r.status === 201) return json({ code, mode, game });
       }
       return json({ error: 'Could not find a free room code. Try again.' }, 503);
     }
@@ -56,24 +65,31 @@ export default {
 export class Room extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
-    this.E = makeEngine();
-    if (env.BOT_PACE) this.E.setPace(+env.BOT_PACE); // dev/tests only: `wrangler dev --var BOT_PACE:0.1`
+    this.pace = env.BOT_PACE ? +env.BOT_PACE : 0; // dev/tests only: `wrangler dev --var BOT_PACE:0.1`
     this.room = null;
     this.posAt = new Map(); // last relayed position / emote time (in memory only: a simple rate limit)
+    this.setGame('europe');
     ctx.blockConcurrencyWhile(async () => {
       this.room = (await ctx.storage.get('room')) || null;
-      if (this.room && this.room.game) this.E.load(this.room.game);
+      if (this.room) { this.setGame(this.room.gameId); if (this.room.game) this.E.load(this.room.game); }
     });
   }
+  setGame(g) {
+    this.gameId = gameOf(g);
+    this.E = GAMES[this.gameId].makeEngine();
+    if (this.pace) this.E.setPace(this.pace);
+  }
+  get MODES() { return GAMES[this.gameId].MODES; }
 
   /* ---------- HTTP: create, peek, connect ---------- */
   async fetch(req) {
     const url = new URL(req.url);
     if (url.pathname === '/init') {
-      const { code, mode } = await req.json();
+      const { code, mode, game } = await req.json();
       if (this.room && Date.now() - this.room.touched < IDLE_MS) return new Response('taken', { status: 409 });
       await this.ctx.storage.deleteAll();
-      this.room = { code, mode, phase: 'lobby', seats: [], hostToken: null, game: null, created: Date.now(), touched: Date.now(), games: 0 };
+      this.setGame(game);
+      this.room = { code, gameId: this.gameId, mode, phase: 'lobby', seats: [], hostToken: null, game: null, created: Date.now(), touched: Date.now(), games: 0 };
       this.E.load(null);
       await this.save(); await this.schedule(Date.now());
       return new Response('ok', { status: 201 });
@@ -81,7 +97,7 @@ export class Room extends DurableObject {
     if (url.pathname === '/info') {
       const R = this.room;
       if (!R) return json({ exists: false }, 404);
-      return json({ exists: true, code: R.code, mode: R.mode, phase: R.phase, humans: R.seats.filter(Boolean).length, over: !!(this.E.S && this.E.S.over), modes: modeInfo });
+      return json({ exists: true, code: R.code, game: this.gameId, mode: R.mode, phase: R.phase, humans: R.seats.filter(Boolean).length, over: !!(this.E.S && this.E.S.over), modes: modeInfoOf(this.gameId) });
     }
     const pair = new WebSocketPair();
     this.ctx.acceptWebSocket(pair[1]);
@@ -121,7 +137,7 @@ export class Room extends DurableObject {
     }
     R.touched = now;
     if (m.t === 'mode') {
-      if (!host || R.phase !== 'lobby' || !MODES[m.mode]) return;
+      if (!host || R.phase !== 'lobby' || !this.MODES[m.mode]) return;
       R.mode = m.mode; await this.save(); return this.broadcast([]);
     }
     if (m.t === 'start') {
@@ -227,7 +243,7 @@ export class Room extends DurableObject {
     const R = this.room;
     const humans = R.seats.filter(Boolean);
     const used = new Set(humans.map((s) => s.name.toLowerCase()));
-    const bots = BOT_NAMES.filter((b) => !used.has(b.toLowerCase()));
+    const bots = GAMES[this.gameId].BOT_NAMES.filter((b) => !used.has(b.toLowerCase()));
     const seats = humans.map((s) => ({ name: s.name, bot: false }));
     while (seats.length < MAX_SEATS) seats.push({ name: bots.shift(), bot: true });
     R.seats = seats.map((s, i) => (i < humans.length ? humans[i] : null));
@@ -255,7 +271,7 @@ export class Room extends DurableObject {
   roomInfo(seat, token) {
     const R = this.room;
     return {
-      code: R.code, mode: R.mode, phase: R.phase, modes: modeInfo, you: seat, host: token === R.hostToken, games: R.games,
+      code: R.code, game: this.gameId, mode: R.mode, phase: R.phase, modes: modeInfoOf(this.gameId), you: seat, host: token === R.hostToken, games: R.games,
       seats: R.seats.map((s) => s && { name: s.name, online: this.online(s.token), host: s.token === R.hostToken }),
       token,
     };

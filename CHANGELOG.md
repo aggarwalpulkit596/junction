@@ -2,6 +2,22 @@
 
 Short version of [`docs/ITERATIONS.md`](docs/ITERATIONS.md). Newest first.
 
+## 1.1.0 — Junction: Delhi Metro (2026-10-24)
+
+### Added
+- **Junction: Delhi Metro** (`metro.html`): a phone-first 3D route-building game on the Delhi Metro. Line passes in the
+  real line colours, drive segments with one tap, depot runs, destination tickets, Signal Failures and one Jam per
+  player. Solo against three robots, or online with up to 4 (robots fill the rest), with the same rooms and codes as
+  Junction 3D.
+- Two lengths: **Rush Hour** (16 trains, 25 s turns, 10 min clock) and **Full Line** (24 trains, 40 s turns, 25 min).
+- A tilted 3D toy Delhi (Three.js): drag, pinch, two-finger turn; the camera rides along with your train when you drive.
+- `metro/rules.js` (one engine for browser and Worker), `mp/metro-sim.mjs`, `mp/metro-e2e.mjs`.
+- The landing page now leads with Delhi Metro; the room-code box opens whichever game the room belongs to.
+
+### Changed
+- Rooms carry a `game` (`europe` or `metro`); `POST /api/rooms` takes `{game, mode}`, `GET /api/rooms/:code` returns `game`.
+- `npm run sim` and `npm run test:online` cover both games; CI checks `metro.html` is up to date.
+
 ## 1.0.0 — Online multiplayer (2026-10-21)
 
 ### Added

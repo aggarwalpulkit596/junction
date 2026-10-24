@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Junction: Delhi Metro</title>
+<meta name="description" content="Drive a Delhi Metro train, claim segments with line passes, finish your destination tickets. A quick route-building game for phones, solo or online with friends.">
+<meta name="theme-color" content="#1c1d33">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f8;--panel:#fff;--ink:#1c1d33;--muted:#5b6080;--outline:#1c1d33;--accent:#ffc933;--accentInk:#1c1d33;--card:#f3f5fb;
+  --good:#0f9e86;--danger:#e5484d;--mapbg:#f7f8fc;--carFree:#ffffff;--label:#2a2c4a;--halo:#f7f8fc;--scrim:rgba(20,22,50,.45);--chipInk:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#141730;--panel:#20244a;--ink:#f1f2ff;--muted:#a7abd0;--outline:#0a0b1e;--card:#2a2f5c;
+  --good:#34d3b2;--danger:#ff5c63;--mapbg:#1a1e3d;--carFree:#2d3263;--label:#e9ebff;--halo:#1a1e3d;--scrim:rgba(0,0,10,.6)}}
+:root[data-theme="dark"]{--bg:#141730;--panel:#20244a;--ink:#f1f2ff;--muted:#a7abd0;--outline:#0a0b1e;--card:#2a2f5c;
+  --good:#34d3b2;--danger:#ff5c63;--mapbg:#1a1e3d;--carFree:#2d3263;--label:#e9ebff;--halo:#1a1e3d;--scrim:rgba(0,0,10,.6)}
+*,*::before,*::after{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,sans-serif;font-weight:700;line-height:1.35;-webkit-font-smoothing:antialiased;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.fd{font-family:'Fredoka','Nunito',sans-serif}
+#app{height:100dvh;max-width:640px;margin:0 auto;display:flex;flex-direction:column;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+/* top bar */
+#top{display:flex;align-items:center;gap:8px;padding:8px 12px 4px}
+#top .brand{font-family:'Fredoka';font-size:20px;font-weight:700;line-height:1;white-space:nowrap}
+#top .brand small{display:block;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+#turnInfo{flex:1;min-width:0;text-align:right;font-size:13.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#turnInfo b{color:var(--ink)}
+#turnInfo .hot{color:var(--danger)}
+.ib{width:38px;height:38px;border-radius:12px;border:2.5px solid var(--outline);background:var(--panel);box-shadow:0 3px 0 var(--outline);display:grid;place-items:center;font-size:17px;flex:none}
+.ib:active{transform:translateY(2px);box-shadow:0 1px 0 var(--outline)}
+/* players */
+#players{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:4px 12px}
+.pl{display:flex;align-items:center;gap:5px;padding:4px 5px;border-radius:12px;background:var(--panel);border:2px solid transparent;min-width:0;font-size:11.5px;overflow:hidden}
+.pl.turn{border-color:var(--outline);box-shadow:0 3px 0 var(--outline)}
+.pl .av{width:20px;height:20px;border-radius:50%;flex:none;display:grid;place-items:center;font-family:'Fredoka';font-weight:700;font-size:11px;color:#fff;border:2px solid var(--outline);text-shadow:0 1px 0 rgba(0,0,0,.3)}
+.pl .txt{min-width:0;line-height:1.15}
+.pl .txt span{display:block}.pl .txt .bot{display:inline}
+.pl .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+.pl .st{color:var(--muted);font-size:9.5px;white-space:nowrap;letter-spacing:-.02em}
+.pl .bot{color:var(--muted);font-weight:600;font-size:9px}
+@media (max-width:480px){.pl .bot{display:none}.pl{gap:4px;padding:3px 4px}}
+.pl.away .nm::after{content:' ·zz';color:var(--muted)}
+/* market */
+#market{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:6px 12px}
+.mcard{height:52px;border-radius:12px;border:2.5px solid var(--outline);box-shadow:0 3px 0 var(--outline);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.35);line-height:1;position:relative;transition:transform .12s}
+.mcard small{font-size:9.5px;font-weight:700;opacity:.9}
+.mcard:active{transform:translateY(2px);box-shadow:0 1px 0 var(--outline)}
+.mcard.W{background:linear-gradient(135deg,#ff6b6b,#ffd166 30%,#06d6a0 55%,#4cc9f0 80%,#c77dff);color:#1c1d33;text-shadow:none}
+.mcard.deck{background:var(--panel);color:var(--ink);text-shadow:none}
+.mcard.tix{background:var(--accent);color:var(--accentInk);text-shadow:none}
+.mcard.empty{background:var(--card);color:var(--muted);box-shadow:none;border-style:dashed;text-shadow:none}
+.mcard.pop{animation:pop .4s}
+#app.mine .mcard:not(.empty){cursor:pointer}
+#app:not(.mine) .mcard{opacity:.78}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+/* map (3D) */
+#mapWrap{flex:1;min-height:0;position:relative;margin:2px 8px 0;border-radius:16px;background:var(--mapbg);border:2.5px solid var(--outline);overflow:hidden}
+#map{width:100%;height:100%;display:block;touch-action:none;outline:0}
+#feed{position:absolute;left:8px;right:8px;bottom:8px;display:flex;flex-direction:column;gap:4px;align-items:flex-start;pointer-events:none;list-style:none}
+#feed li{background:var(--panel);border:2px solid var(--outline);border-radius:10px;padding:4px 9px;font-size:12.5px;max-width:100%;animation:fin .25s;box-shadow:0 2px 0 var(--outline)}
+#feed li.danger{border-color:var(--danger);color:var(--danger)}
+#feed li.good{border-color:var(--good)}
+@keyframes fin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#zoomHint{position:absolute;top:6px;right:8px;font-size:11px;color:var(--muted);pointer-events:none}
+#camBtns{position:absolute;top:6px;left:8px;display:flex;gap:6px}
+#camBtns .ib{width:32px;height:32px;font-size:15px}
+@keyframes ring{0%,100%{opacity:.5}50%{opacity:1}}
+/* hand */
+#hand{display:flex;align-items:center;gap:5px;padding:8px 12px 4px}
+.chip{flex:1;height:44px;border-radius:12px;background:var(--c);border:2.5px solid var(--outline);box-shadow:0 3px 0 var(--outline);position:relative;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.35);min-width:0}
+.chip.W{background:linear-gradient(135deg,#ff6b6b,#ffd166 30%,#06d6a0 55%,#4cc9f0 80%,#c77dff);color:#1c1d33;text-shadow:none}
+.chip.zero{opacity:.3;box-shadow:none}
+.chip .n{position:absolute;top:-9px;right:-5px;min-width:20px;height:20px;border-radius:10px;background:var(--panel);color:var(--ink);border:2px solid var(--outline);font-size:12px;display:grid;place-items:center;padding:0 4px;text-shadow:none}
+.chip.bump .n{animation:pop .4s}
+.jamBtn{flex:none;height:44px;padding:0 10px;border-radius:12px;border:2.5px solid var(--outline);background:var(--panel);box-shadow:0 3px 0 var(--outline);font-size:12px;font-weight:800;display:flex;align-items:center;gap:4px}
+.jamBtn.on{background:var(--danger);color:#fff}
+.jamBtn:disabled{opacity:.4;box-shadow:none}
+#status{padding:4px 14px 8px;font-size:13.5px;color:var(--muted);min-height:26px;text-align:center}
+#status.mine{color:var(--ink)}
+#status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:6px;animation:ring 1s infinite}
+/* sheet */
+#scrim{position:fixed;inset:0;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+#scrim.on{opacity:1;pointer-events:auto}
+#sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,105%);width:min(100%,640px);max-height:88dvh;background:var(--panel);border:3px solid var(--outline);border-bottom:0;border-radius:22px 22px 0 0;
+  box-shadow:0 -4px 0 var(--outline);transition:transform .25s cubic-bezier(.2,.8,.2,1);z-index:21;display:flex;flex-direction:column}
+#sheet.on{transform:translate(-50%,0)}
+#sheetBody{overflow:auto;padding:16px 18px calc(18px + env(safe-area-inset-bottom,0));-webkit-overflow-scrolling:touch}
+#sheet .grab{width:44px;height:5px;border-radius:3px;background:var(--muted);opacity:.5;margin:8px auto 0}
+#sheet h3{font-family:'Fredoka';font-size:24px;font-weight:700;line-height:1.1;margin:2px 0 8px}
+#sheet h1{font-family:'Fredoka';font-size:34px;font-weight:700;line-height:1;margin:0 0 4px}
+#sheet p{font-weight:600;margin:0 0 12px;color:var(--ink)}
+#sheet p.small,#sheet .small{font-size:13px;color:var(--muted)}
+.kicker{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:800;margin:14px 0 6px}
+.kicker:first-child{margin-top:0}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px 14px;border-radius:14px;border:2.5px solid var(--outline);background:var(--card);box-shadow:0 3px 0 var(--outline);font-weight:800;font-size:15.5px;margin:0 0 10px;text-align:center;flex-wrap:wrap}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--outline)}
+.btn.primary{background:var(--accent);color:var(--accentInk)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.sel{outline:3px solid var(--accent);outline-offset:-3px}
+.btn[disabled]{opacity:.5;box-shadow:none;transform:none}
+.btn small{display:block;width:100%;font-size:12.5px;font-weight:700;color:var(--muted)}
+.btn.primary small{color:var(--accentInk);opacity:.8}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.modes .btn{margin:0;padding:12px 8px;flex-direction:column;gap:2px}
+.pay{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}
+.pc{display:inline-grid;place-items:center;width:30px;height:38px;border-radius:7px;border:2px solid var(--outline);background:var(--c);color:#fff;font-size:11px;font-weight:800;text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.pc.W{background:linear-gradient(135deg,#ff6b6b,#ffd166 30%,#06d6a0 55%,#4cc9f0 80%,#c77dff);color:#1c1d33;text-shadow:none}
+.pc.plus{background:none;border:0;width:auto;color:var(--muted)}
+.tk{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:2.5px solid var(--outline);background:var(--card);margin-bottom:8px;width:100%;text-align:left}
+.tk.on{background:var(--accent);color:var(--accentInk)}
+.tk .box{width:24px;height:24px;border-radius:7px;border:2.5px solid var(--outline);background:var(--panel);display:grid;place-items:center;flex:none;font-size:14px}
+.tk .pts{margin-left:auto;font-family:'Fredoka';font-size:20px;font-weight:700}
+.tk .sub{display:block;font-size:12px;color:var(--muted);font-weight:700}
+.tk.ok{border-color:var(--good)}
+.tk.bad{opacity:.75}
+.lineDot{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--outline);vertical-align:-1px;margin-right:4px;background:var(--c)}
+table.score{width:100%;border-collapse:collapse;font-size:14px;margin:4px 0 10px}
+table.score th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:right;padding:4px 6px;border-bottom:2px solid var(--card)}
+table.score td{text-align:right;padding:6px;border-bottom:1px solid var(--card)}
+table.score th:first-child,table.score td:first-child{text-align:left}
+table.score .tot{font-family:'Fredoka';font-size:19px;font-weight:700}
+.who{display:inline-flex;align-items:center;gap:6px}
+.who .av{width:20px;height:20px;border-radius:50%;border:2px solid var(--outline);display:inline-block}
+ul.rules{padding-left:18px;margin:0 0 12px;font-weight:600}
+ul.rules li{margin-bottom:6px}
+.field{display:block;margin-bottom:10px}
+.field span{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px;font-weight:800}
+input{font:inherit;font-weight:700;color:var(--ink);background:var(--card);border:2.5px solid var(--outline);border-radius:13px;padding:11px 12px;width:100%;min-width:0;user-select:text;-webkit-user-select:text}
+input.code{font-family:'Fredoka';font-size:22px;letter-spacing:.25em;text-transform:uppercase;text-align:center}
+.joinrow,.share{display:flex;gap:8px;margin-bottom:10px}
+.joinrow .btn,.share .btn{width:auto;margin:0;flex:none}
+.seats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.seat{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;border:2.5px solid var(--outline);background:var(--card);font-size:13.5px}
+.seat.empty{opacity:.6;border-style:dashed}
+.seat .av{width:26px;height:26px;border-radius:50%;border:2px solid var(--outline);flex:none}
+.seat .tag{margin-left:auto;font-size:10.5px;background:var(--accent);color:var(--accentInk);border-radius:6px;padding:1px 5px}
+.seat .off{margin-left:auto;font-size:10.5px;color:var(--muted)}
+.code{font-family:'Fredoka';letter-spacing:.15em}
+.logl{list-style:none;padding:0;margin:0 0 10px;font-size:13.5px;font-weight:600}
+.logl li{padding:6px 0;border-bottom:1px solid var(--card)}
+.logl li.danger{color:var(--danger)}.logl li.good{color:var(--good)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2 .btn{margin:0}
+#boot{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:50;font-family:'Fredoka';font-size:22px;color:var(--muted)}
+#side{display:contents}
+#top{order:0}#players{order:1}#market{order:2}#mapWrap{order:3}#hand{order:4}#status{order:5}
+@media (min-width:900px){
+  #app{max-width:1400px;display:grid;grid-template-columns:minmax(0,1fr) 400px;grid-template-rows:auto minmax(0,1fr);grid-template-areas:"top top" "map side";column-gap:14px;padding:0 14px}
+  #top{grid-area:top}#mapWrap{grid-area:map;margin:0 0 14px}
+  #side{grid-area:side;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto;padding-bottom:14px}
+  #players{grid-template-columns:1fr 1fr;padding:0}#market{padding:0}#hand{padding:8px 0 0}#status{padding:4px 0 0;text-align:left}
+  #top .brand{font-size:24px}#market .mcard{height:62px;font-size:12.5px}.chip{height:50px;font-size:11.5px}.pl{font-size:13px}.pl .st{font-size:11.5px}
+}
+@media (max-height:640px){#players{display:none}.mcard{height:46px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="brand">Junction<small>Delhi Metro</small></div>
+    <div id="turnInfo"></div>
+    <button class="ib" id="logBtn" aria-label="Game log">📜</button>
+    <button class="ib" id="menuBtn" aria-label="Menu">☰</button>
+  </header>
+  <div id="side">
+    <div id="players"></div>
+    <div id="market"></div>
+    <div id="hand"></div>
+    <div id="status"></div>
+  </div>
+  <div id="mapWrap"><canvas id="map" aria-label="Delhi Metro, a 3D board"></canvas><ul id="feed"></ul><div id="zoomHint">drag to pan · pinch or scroll to zoom · two fingers to turn</div><div id="camBtns"><button class="ib" id="camHome" aria-label="Show the whole map">⌂</button><button class="ib" id="camTurn" aria-label="Turn the map">⟳</button></div></div>
+</div>
+<div id="scrim"></div>
+<div id="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div id="sheetBody"></div></div>
+<div id="boot">Loading the map…</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
+/* ============================== rules engine (inlined from metro/rules.js by mp/build.mjs) ============================== */
+/*@@RULES@@*/
+/* ============================== client ============================== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const colOf=c=>c==='W'?'#ffd166':c==='any'?ANY_COL:LINES[c].col;
+const cname=c=>c==='W'?'Smart Card':LINES[c].name;
+const mmss=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+const SHORT_NAME={R:'Red',Y:'Yel',B:'Blue',G:'Grn',V:'Vio',P:'Pink',M:'Mag',O:'Org'};
+
+/* ---- state: V is the current view (from the local engine or the server); the UI renders only from V ---- */
+let V=null,E=null,SOLO_MODE=store.get('metro-mode')||'rush',jamMode=false,selSeg=null,lastLogN=0,barKey='';
+const app=$('app');
+const NET={on:false,ws:null,code:null,token:null,room:null,skew:0,retry:0,closing:false,pickMode:'rush',gameKey:null,finalShown:false,offerKey:null,keep:new Set()};
+const netNow=()=>Date.now()+NET.skew;
+const canOnline=()=>/^https?:$/.test(location.protocol);
+const me=()=>V&&V.players[0];
+const myTurn=()=>!!V&&V.phase==='play'&&V.turn===0&&!V.over&&!V.offer;
+
+/* ---- map geometry (map units: 1000×1300, y grows south) ---- */
+const P=id=>[C[id].x,C[id].y];
+const WX=x=>x-500,WZ=y=>y-650;
+const twins={};SEGS.forEach(s=>{const k=[s.a,s.b].sort().join('|');(twins[k]=twins[k]||[]).push(s.i)});
+function segGeom(s){ // start, end and a perpendicular offset for parallel segments
+  const [ax,ay]=P(s.a),[bx,by]=P(s.b),dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy),nx=-dy/L,ny=dx/L;
+  const tw=twins[[s.a,s.b].sort().join('|')],off=tw.length>1?(tw.indexOf(s.i)===0?-12:12):0;
+  return{ax:ax+nx*off,ay:ay+ny*off,bx:bx+nx*off,by:by+ny*off,L,ux:dx/L,uy:dy/L,nx,ny,ang:Math.atan2(dy,dx)};
+}
+const linesAt={};IDS.forEach(id=>linesAt[id]=new Set());SEGS.forEach(s=>{linesAt[s.a].add(s.line);linesAt[s.b].add(s.line)});
+const SEGEL=[],STNEL={},TRAIN=[];
+
+/* ---- the 3D board: a tilted toy Delhi with elevated metro viaducts ---- */
+const canvas=$('map'),wrap=$('mapWrap');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(40,1,2,9000);
+scene.add(new THREE.HemisphereLight('#ffffff','#b8b09a',1.1));
+const sun=new THREE.DirectionalLight('#fff6e6',1.5);sun.position.set(-400,900,300);scene.add(sun);
+const INK='#1c1d33',DECK_Y=10;
+const mat=(c,o={})=>new THREE.MeshLambertMaterial({color:c,...o});
+const isDark=()=>document.documentElement.dataset.theme==='dark'||(!document.documentElement.dataset.theme&&matchMedia('(prefers-color-scheme: dark)').matches);
+function themeScene(){const d=isDark();scene.background=new THREE.Color(d?'#1a1e3d':'#dfe8f4');scene.fog=new THREE.Fog(d?'#1a1e3d':'#dfe8f4',3200,5600);ground.material.color.set(d?'#232a52':'#e9eddc');
+  BLOCKS.forEach(m=>m.material.color.set(d?'#2f376b':m.userData.col));river.material.color.set(d?'#2d4f8a':'#8ec4ea')}
+function resize(){const w=wrap.clientWidth,h=wrap.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+  const t=Math.tan(camera.fov*Math.PI/360);HOME.dist=Math.min(2600,1.18*Math.max(1300/(2*t),1000/(2*t*camera.aspect)));if(!CAM.moved)CAM.dist=HOME.dist}
+new ResizeObserver(resize).observe(wrap);
+// ground and the Yamuna
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(2600,3000),mat('#e9eddc'));ground.rotation.x=-Math.PI/2;ground.position.y=-1;scene.add(ground);
+function ribbon(pts,width,y,color,segs){ // a flat strip along a polyline, in world coords
+  const L=[],R=[];
+  for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[Math.min(i+1,pts.length-1)],o=pts[Math.max(i-1,0)];let dx=q[0]-o[0],dz=q[1]-o[1];const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
+    L.push(p[0]-dz*width/2,y,p[1]+dx*width/2);R.push(p[0]+dz*width/2,y,p[1]-dx*width/2)}
+  const pos=[],idx=[];for(let i=0;i<pts.length;i++){pos.push(L[i*3],L[i*3+1],L[i*3+2],R[i*3],R[i*3+1],R[i*3+2])}
+  for(let i=0;i<pts.length-1;i++){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  return new THREE.Mesh(g,mat(color,{side:THREE.DoubleSide}));
+}
+const river=ribbon([[620,-250],[640,150],[690,420],[705,560],[730,760],[790,1000],[860,1250],[900,1600]].map(([x,y])=>[WX(x),WZ(y)]),44,0,'#8ec4ea');scene.add(river);
+// toy city blocks, kept away from the tracks and stations
+const BLOCKS=[];
+{const near=(x,y)=>{for(const s of SEGS){const g=segGeom(s),t=((x-g.ax)*g.ux+(y-g.ay)*g.uy);const cx=g.ax+g.ux*Math.max(0,Math.min(g.L,t)),cy=g.ay+g.uy*Math.max(0,Math.min(g.L,t));if(Math.hypot(x-cx,y-cy)<34)return true}
+    for(const id of IDS){const[sx,sy]=P(id);if(Math.hypot(x-sx,y-sy)<60)return true}return false};
+  const pal=['#f4d9b5','#f3c6c6','#cfe3f3','#dcebc8','#f5e6a8','#e5d4f2','#f8f1e4'];
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const geo=new THREE.BoxGeometry(1,1,1);
+  for(let k=0;k<420;k++){const x=rnd()*1100-50,y=rnd()*1400-50;if(near(x,y))continue;const w=14+rnd()*22,d=14+rnd()*22,h=6+rnd()*(rnd()<.12?60:22);
+    const m=new THREE.Mesh(geo,mat(pal[Math.floor(rnd()*pal.length)]));m.scale.set(w,h,d);m.position.set(WX(x),h/2-1,WZ(y));m.rotation.y=rnd()<.5?0:Math.PI/2;m.userData.col=m.material.color.getStyle();BLOCKS.push(m);scene.add(m)}
+}
+// labels: canvas sprites that always face the camera
+const canvasTex=(w,h,draw)=>{const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'));const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t};
+function labelSprite(text,o={}){
+  const fs=o.fs||44,pad=14,meas=document.createElement('canvas').getContext('2d');meas.font=`800 ${fs}px Nunito, sans-serif`;
+  const lines=String(text).split('\n'),w=Math.ceil(Math.max(...lines.map(l=>meas.measureText(l).width)))+pad*2,h=fs*1.15*lines.length+pad*1.4;
+  const tex=canvasTex(w,h,x=>{x.font=`800 ${fs}px Nunito, sans-serif`;x.textAlign='center';x.textBaseline='middle';x.lineJoin='round';
+    if(o.bg){x.fillStyle=INK;x.beginPath();x.roundRect(1,1,w-2,h-2,h/2);x.fill();x.fillStyle=o.bg;x.beginPath();x.roundRect(5,5,w-10,h-10,h/2-4);x.fill()}
+    lines.forEach((l,i)=>{const y=h/2+(i-(lines.length-1)/2)*fs*1.15+2;if(!o.bg){x.lineWidth=11;x.strokeStyle=o.halo||'rgba(255,255,255,.95)';x.strokeText(l,w/2,y)}x.fillStyle=o.color||INK;x.fillText(l,w/2,y)})});
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthWrite:false,depthTest:false,transparent:true}));
+  const S=o.size||22;sp.scale.set(S*w/h,S,1);sp.userData.base=[S*w/h,S];sp.renderOrder=o.order||5;return sp;
+}
+const G={segs:new THREE.Group(),stns:new THREE.Group(),trains:new THREE.Group(),hits:new THREE.Group()};Object.values(G).forEach(g=>scene.add(g));
+const carGeo=new THREE.BoxGeometry(1,1,1),edgeMat=new THREE.LineBasicMaterial({color:INK});
+function buildMap(){
+  const pillarGeo=new THREE.CylinderGeometry(2.2,2.6,DECK_Y+1,8),pillarMat=mat('#cfd3dc');
+  SEGS.forEach(s=>{
+    const g=segGeom(s),grp=new THREE.Group();grp.userData.si=s.i;
+    const A=[WX(g.ax),WZ(g.ay)],B=[WX(g.bx),WZ(g.by)];
+    const deck=ribbon([A,B],s.c==='any'?9:11,DECK_Y,s.col);grp.add(deck);
+    const under=ribbon([A,B],s.c==='any'?9:11,DECK_Y-2.2,'#9aa0ad');grp.add(under);
+    for(let t=40;t<g.L-20;t+=70){const m=new THREE.Mesh(pillarGeo,pillarMat);m.position.set(WX(g.ax+g.ux*t),(DECK_Y-1)/2-1,WZ(g.ay+g.uy*t));grp.add(m)}
+    const n=s.len,carL=Math.max(20,Math.min(36,(g.L-26)/n-10)),gap=(g.L-26)/n,cars=[];
+    for(let k=0;k<n;k++){const t=13+gap*(k+.5),cx=WX(g.ax+g.ux*t),cz=WZ(g.ay+g.uy*t);
+      const car=new THREE.Group();car.position.set(cx,DECK_Y+5,cz);car.rotation.y=-g.ang;
+      const body=new THREE.Mesh(carGeo,mat('#ffffff'));body.scale.set(carL,9,13);car.add(body);
+      const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(carL+.4,9.4,13.4)),new THREE.LineBasicMaterial({color:s.col}));car.add(edges);
+      const win=new THREE.Mesh(carGeo,mat('#ffffff'));win.scale.set(carL*.7,3,13.6);win.position.y=1.2;win.visible=false;car.add(win);
+      car.userData={body,edges,win,baseY:DECK_Y+5};cars.push(car);grp.add(car)}
+    const hit=new THREE.Mesh(new THREE.BoxGeometry(g.L,34,44),new THREE.MeshBasicMaterial({visible:false}));
+    hit.position.set((A[0]+B[0])/2,DECK_Y+6,(A[1]+B[1])/2);hit.rotation.y=-g.ang;hit.userData.si=s.i;G.hits.add(hit);
+    const badge=labelSprite('🚧',{size:30,order:8});badge.position.set((A[0]+B[0])/2,DECK_Y+30,(A[1]+B[1])/2);badge.visible=false;grp.add(badge);
+    SEGEL[s.i]={grp,cars,badge,hit};G.segs.add(grp);
+  });
+  STATION_DATA.forEach(([id,name,x,y,side])=>{
+    const inter=linesAt[id].size>1,r=inter?16:11,grp=new THREE.Group();grp.position.set(WX(x),0,WZ(y));
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(r+3,r+3,DECK_Y+3,24),mat(inter?INK:firstCol(id)));base.position.y=(DECK_Y+3)/2-1;grp.add(base);
+    const top=new THREE.Mesh(new THREE.CylinderGeometry(r,r,3,24),mat('#ffffff'));top.position.y=DECK_Y+3.5;grp.add(top);
+    if(inter){const roof=new THREE.Mesh(new THREE.CylinderGeometry(r*.55,r*.55,8,16),mat('#ffffff'));roof.position.y=DECK_Y+9;grp.add(roof)}
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(r+7,2.4,8,36),mat('#ffc933'));ring.rotation.x=Math.PI/2;ring.position.y=DECK_Y+5.5;ring.visible=false;grp.add(ring);
+    const words=name.split(' '),two=name.length>14&&words.length>1;
+    const label=labelSprite(two?words.slice(0,Math.ceil(words.length/2)).join(' ')+'\n'+words.slice(Math.ceil(words.length/2)).join(' '):name,{size:inter?(two?30:16):(two?26:14),fs:inter?44:40});
+    const lx=side.includes('l')?-r-6:side.includes('r')?r+6:0,lz=side[0]==='t'?-r-14:side[0]==='b'?r+14:0;
+    label.center.set(side.includes('l')?1:side.includes('r')?0:.5,side[0]==='t'?0:side[0]==='b'?1:.5);
+    label.position.set(lx,DECK_Y+16,lz);grp.add(label);
+    const hit=new THREE.Mesh(new THREE.CylinderGeometry(r+10,r+10,40,12),new THREE.MeshBasicMaterial({visible:false}));hit.position.set(WX(x),DECK_Y+8,WZ(y));hit.userData.id=id;G.hits.add(hit);
+    STNEL[id]={grp,ring,label};G.stns.add(grp);
+  });
+  for(let i=0;i<4;i++){
+    const g=new THREE.Group(),col=SEAT_COLS[i];
+    const body=new THREE.Mesh(carGeo,mat(col));body.scale.set(40,15,17);body.position.y=8;g.add(body);
+    const roof=new THREE.Mesh(carGeo,mat('#ffffff'));roof.scale.set(36,2.5,13);roof.position.y=16.5;g.add(roof);
+    const win=new THREE.Mesh(carGeo,mat('#eaf6ff'));win.scale.set(30,5,17.6);win.position.y=10;g.add(win);
+    const nose=new THREE.Mesh(carGeo,mat(INK));nose.scale.set(4,10,15);nose.position.set(21,7,0);g.add(nose);
+    const lamp=new THREE.Mesh(carGeo,mat('#fff2a8'));lamp.scale.set(2,3,8);lamp.position.set(23.2,5,0);g.add(lamp);
+    const edges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(40.4,15.4,17.4)),edgeMat);edges.position.y=8;g.add(edges);
+    g.visible=false;G.trains.add(g);
+    TRAIN.push({g,at:null,anim:null,x:0,z:0});
+  }
+  themeScene();
+}
+function firstCol(id){const s=SEGS.find(s=>s.a===id||s.b===id);return s?s.col:INK}
+new MutationObserver(themeScene).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',themeScene);
+
+/* ---- camera: orbit a point on the board; drag pans, pinch/wheel zooms, two fingers (or shift-drag) turn ---- */
+const HOME={tx:0,tz:20,dist:2250,pitch:1.0}; // dist is recomputed in resize()
+const CAM={tx:HOME.tx,tz:HOME.tz,yaw:0,pitch:HOME.pitch,dist:HOME.dist,cur:{tx:HOME.tx,tz:HOME.tz,yaw:0,pitch:HOME.pitch,dist:HOME.dist},ride:null,moved:false,home(){Object.assign(CAM,HOME)}};
+const clampCam=()=>{CAM.dist=Math.max(260,Math.min(2600,CAM.dist));CAM.pitch=Math.max(.55,Math.min(1.35,CAM.pitch));CAM.tx=Math.max(-620,Math.min(620,CAM.tx));CAM.tz=Math.max(-750,Math.min(780,CAM.tz))};
+function placeCamera(){
+  const c=CAM.cur,k=.14;['tx','tz','yaw','pitch','dist'].forEach(key=>{c[key]+=(CAM[key]-c[key])*k});
+  let tx=c.tx,tz=c.tz,yaw=c.yaw,pitch=c.pitch,dist=c.dist,lookY=DECK_Y;
+  if(CAM.ride){const T=TRAIN[CAM.ride.seat],hd=CAM.ride.heading;const want={tx:T.x,tz:T.z,yaw:hd+Math.PI,pitch:.42,dist:170};
+    const r=CAM.ride;r.k=Math.min(1,(r.k||0)+.05);const e=r.k*r.k*(3-2*r.k);
+    tx=tx+(want.tx-tx)*e;tz=tz+(want.tz-tz)*e;let dy=((want.yaw-yaw+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;yaw=yaw+dy*e;pitch=pitch+(want.pitch-pitch)*e;dist=dist+(want.dist-dist)*e;lookY=DECK_Y+8;
+    Object.assign(c,{tx,tz,yaw,pitch,dist})}
+  camera.position.set(tx+Math.sin(yaw)*Math.cos(pitch)*dist,Math.sin(pitch)*dist,tz+Math.cos(yaw)*Math.cos(pitch)*dist);
+  camera.lookAt(tx,lookY,tz);
+}
+const ray=new THREE.Raycaster();
+function pickAt(cx,cy){const r=canvas.getBoundingClientRect();const v=new THREE.Vector2(((cx-r.left)/r.width)*2-1,-((cy-r.top)/r.height)*2+1);ray.setFromCamera(v,camera);
+  const hits=ray.intersectObjects(G.hits.children,false);if(!hits.length)return null;const u=hits[0].object.userData;return u.id!==undefined?{id:u.id}:{si:u.si}}
+{
+  const ptrs=new Map();let downAt=null,pinch=0,twist=0,moved=false;
+  const two=()=>{const[a,b]=[...ptrs.values()];return{d:Math.hypot(a[0]-b[0],a[1]-b[1]),ang:Math.atan2(b[1]-a[1],b[0]-a[0]),mx:(a[0]+b[0])/2,my:(a[1]+b[1])/2}};
+  canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);if(ptrs.size===1){downAt=[e.clientX,e.clientY,performance.now()];moved=false}if(ptrs.size===2){const t=two();pinch=t.d;twist=t.ang}});
+  canvas.addEventListener('pointermove',e=>{
+    if(!ptrs.has(e.pointerId))return;const prev=ptrs.get(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    if(CAM.ride)return;CAM.moved=true;
+    if(ptrs.size===2){const t=two();if(pinch){CAM.dist*=pinch/t.d}let da=t.ang-twist;if(da>Math.PI)da-=2*Math.PI;if(da<-Math.PI)da+=2*Math.PI;CAM.yaw-=da;pinch=t.d;twist=t.ang;moved=true;clampCam();return}
+    const dx=e.clientX-prev[0],dy=e.clientY-prev[1];if(Math.abs(dx)+Math.abs(dy)>0){if(Math.hypot(e.clientX-downAt[0],e.clientY-downAt[1])>6)moved=true;
+      if(e.shiftKey||e.buttons===2){CAM.yaw-=dx*.006;CAM.pitch+=dy*.004}
+      else{const k=CAM.dist/canvas.clientHeight*1.15,c=Math.cos(CAM.yaw),s=Math.sin(CAM.yaw);CAM.tx-=(dx*c-dy*s)*k;CAM.tz-=(dx*s+dy*c)*k}
+      clampCam()}
+  });
+  const up=e=>{if(ptrs.has(e.pointerId)&&ptrs.size===1&&downAt&&!moved&&performance.now()-downAt[2]<600){const h=pickAt(e.clientX,e.clientY);if(h){if(h.si!==undefined)tapSeg(h.si);else tapStation(h.id)}}
+    ptrs.delete(e.pointerId);if(ptrs.size<2){pinch=0}if(!ptrs.size)downAt=null};
+  canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);if(!ptrs.size)downAt=null});
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  canvas.addEventListener('wheel',e=>{e.preventDefault();if(CAM.ride)return;CAM.moved=true;CAM.dist*=e.deltaY>0?1.12:1/1.12;clampCam()},{passive:false});
+  canvas.addEventListener('dblclick',e=>{e.preventDefault();const r=canvas.getBoundingClientRect();const v=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(v,camera);
+    const pt=new THREE.Vector3();if(ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-DECK_Y),pt)){CAM.tx=pt.x;CAM.tz=pt.z;CAM.dist=CAM.dist>700?480:HOME.dist;clampCam()}});
+  $('camHome').onclick=()=>{CAM.home();CAM.moved=false;clampCam()};$('camTurn').onclick=()=>{CAM.yaw+=Math.PI/2};
+}
+// where a train should stand at a station (each seat gets its own corner)
+const SEAT_OFF=[[-16,-16],[16,-16],[-16,16],[16,16]];
+function placeTrain(i,x,y,heading){const T=TRAIN[i];T.x=WX(x)+SEAT_OFF[i][0];T.z=WZ(y)+SEAT_OFF[i][1];T.g.position.set(T.x,DECK_Y+1,T.z);if(heading!==undefined)T.g.rotation.y=-heading}
+function frame(){
+  const now=performance.now();if(frame.lk===undefined)frame.lk=0;
+  // pulsing highlights
+  const pulse=.5+.5*Math.sin(now/260);
+  SEGEL.forEach(el=>{if(!el.can)return;el.cars.forEach(c=>{c.position.y=c.userData.baseY+2+pulse*3;c.scale.setScalar(1+pulse*.08)})});
+  Object.values(STNEL).forEach(el=>{if(el.ring.visible&&!el.ring.userData.ok)el.ring.material.opacity=.6+.4*Math.sin(now/300)});
+  const lk=Math.max(.85,Math.min(2.4,CAM.cur.dist/1000));if(Math.abs(lk-frame.lk)>.02){frame.lk=lk;Object.values(STNEL).forEach(el=>{const b=el.label.userData.base;el.label.scale.set(b[0]*lk,b[1]*lk,1)});SEGEL.forEach(el=>{const b=el.badge.userData.base;el.badge.scale.set(b[0]*lk,b[1]*lk,1)})}
+  placeCamera();renderer.render(scene,camera);requestAnimationFrame(frame);
+}
+/* ---- rendering from V ---- */
+function render(){
+  if(!V)return;
+  const m=me(),mine=myTurn()&&!V.drawn,mine2=myTurn();
+  app.classList.toggle('mine',mine2);
+  // players
+  $('players').innerHTML=V.players.map((p,i)=>`<div class="pl ${V.phase==='play'&&V.turn===i&&!V.over?'turn':''} ${p.away?'away':''}" title="${esc(p.name)}">
+    <span class="av" style="background:${p.col}">${esc((i?p.name:'You')[0])}</span><span class="txt"><span class="nm">${i?esc(p.name):'You'}${p.bot?' <span class="bot">robot</span>':''}</span><span class="st">${p.trains}🚆 ${p.handN}🎫 ${p.pts}★</span></span></div>`).join('');
+  // market
+  const cards=V.market.map((c,i)=>c?`<button class="mcard ${c==='W'?'W':''}" data-mk="${i}" style="${c==='W'?'':'background:'+colOf(c)}" aria-label="Take a ${cname(c)} pass">${c==='W'?'Smart<small>Card</small>':esc(cname(c))+'<small>pass</small>'}</button>`:'<div class="mcard empty">—</div>').join('');
+  $('market').innerHTML=cards+`<button class="mcard deck" data-mk="deck" aria-label="Draw from the deck">Deck<small>${V.deckN+V.discardN}</small></button><button class="mcard tix" data-mk="tix" aria-label="Draw destination tickets">Tickets<small>${V.ticketDeckN} left</small></button>`;
+  // hand
+  const hand=m.hand||{};
+  $('hand').innerHTML=COLS.concat('W').map(c=>`<div class="chip ${c==='W'?'W':''} ${hand[c]?'':'zero'}" style="--c:${colOf(c)}" data-chip="${c}" title="${cname(c)}: ${hand[c]||0}">${c==='W'?'Wild':esc(SHORT_NAME[c])}<span class="n">${hand[c]||0}</span></div>`).join('')+
+    `<button class="jamBtn ${jamMode?'on':''}" id="jamBtn" ${m.jam&&mine?'':'disabled'} title="Jam a free segment for 2 rounds (once per game)">🚧 ${m.jam?'Jam':'Used'}</button>`;
+  // map
+  const can=new Set(),far=new Set();
+  if(mine)SEGS.forEach(s=>{if(V.owners[s.i]!==null)return;const dep=!touchesV(s);if(payOptionsV(s,dep).length&&!blockedV(s.i)){can.add(s.i);if(dep&&m.at)far.add(s.i)}});
+  SEGS.forEach(s=>{const o=V.owners[s.i],el=SEGEL[s.i],jam=V.jams[s.i],fail=V.fail===s.i,isCan=can.has(s.i),closed=jam||fail;
+    el.can=isCan;
+    el.cars.forEach(c=>{const u=c.userData;
+      if(o===null){u.body.material.color.set(closed?'#d9dce6':'#ffffff');u.win.visible=false;u.edges.material.color.set(isCan?(selSeg===s.i?'#ffc933':INK):s.col);u.edges.material.linewidth=1}
+      else{u.body.material.color.set(V.players[o].col);u.win.visible=true;u.edges.material.color.set(INK)}
+      if(!isCan){c.position.y=u.baseY;c.scale.setScalar(1)}
+      u.body.material.transparent=closed&&o===null;u.body.material.opacity=closed&&o===null?.55:1});
+    el.badge.visible=!!closed;
+    if(closed&&el.badgeKind!==(fail?'fail':'jam')){el.badgeKind=fail?'fail':'jam';const nb=labelSprite(fail?'⚠️':'🚧',{size:30,order:8});nb.position.copy(el.badge.position);el.grp.remove(el.badge);el.badge=nb;el.grp.add(nb)}
+  });
+  // ticket rings: amber for unfinished tickets, green once connected
+  const want={};(m.tickets||[]).forEach((t,i)=>{const ok=!!(m.done&&m.done[i]);[t.a,t.b].forEach(id=>{want[id]=want[id]==='no'||!ok?'no':'ok'})});
+  IDS.forEach(id=>{const r=STNEL[id].ring;r.visible=!!want[id];r.userData.ok=want[id]==='ok';r.material.color.set(want[id]==='ok'?'#0f9e86':'#ffc933');r.material.transparent=true;r.material.opacity=1});
+  // trains
+  V.players.forEach((p,i)=>{const T=TRAIN[i];if(T.anim)return;if(!p.at){T.g.visible=false;return}T.at=p.at;placeTrain(i,...P(p.at));T.g.visible=true});
+  renderTop();renderStatus();
+}
+function renderTop(){
+  const t=$('turnInfo');if(!V){t.textContent='';barKey='';return}
+  let s='';
+  if(V.over)s='Game over';
+  else if(V.phase==='tickets')s=`Choosing tickets${NET.on?' · '+mmss(V.ticketEnds-netNow()):''}`;
+  else{const p=V.players[V.turn],who=V.turn===0?'<b>Your turn</b>':esc(p.name)+(p.bot?' 🤖':'');
+    const sec=NET.on?Math.ceil((V.turnEnds-netNow())/1000):null;
+    s=`${who}${sec!==null?` · <span class="${V.turn===0&&sec<=5?'hot':''}">${Math.max(0,sec)}s</span>`:''} · R${V.round}`;
+    if(NET.on)s+=V.lastTurns!==null?' · <b>final round</b>':' · 🕒'+mmss(V.clockEnds-netNow());
+    else if(V.lastTurns!==null)s+=' · <b>final round</b>';}
+  if(NET.on&&NET.code)s=`<span class="code">${esc(NET.code)}</span> · `+s;
+  if(s!==barKey){barKey=s;t.innerHTML=s}
+}
+function renderStatus(){
+  const st=$('status');let t='',mine=false;
+  if(!V){st.textContent='';return}
+  if(V.over)t='Game over. Tap ☰ for the scores.';
+  else if(V.offer)t='Choose which tickets to keep.';
+  else if(V.phase==='tickets'){const n=V.players.filter(p=>p.choosing).length;t=`<span class="dot"></span>Waiting for ${n} player${n>1?'s':''} to choose tickets…`}
+  else if(V.turn!==0){const p=V.players[V.turn];t=`<span class="dot"></span>${esc(p.name)}${p.bot?' (robot)':p.away?' (away, a robot is helping)':''} is ${V.lastTurns!==null?'taking a final turn':'on the move'}…`}
+  else if(jamMode){mine=true;t='Tap a free segment to jam it for 2 rounds. Tap 🚧 again to cancel.'}
+  else if(V.drawn===1){mine=true;t='Take one more pass to finish your turn.'}
+  else{mine=true;const m=me();t=m.at?'Your turn: tap a glowing segment to drive it, or take 2 passes.':'Your turn: tap any glowing segment to start driving, or take 2 passes.'}
+  st.className=mine?'mine':'';st.innerHTML=t;
+}
+// client-side copies of the engine's checks (used for highlighting; the engine has the real say)
+function touchesV(s){const net=new Set();SEGS.forEach(x=>{if(V.owners[x.i]===0){net.add(x.a);net.add(x.b)}});return net.size===0||net.has(s.a)||net.has(s.b)}
+const blockedV=si=>!!V.jams[si]||V.fail===si;
+function payOptionsV(s,depot){const m=me(),hand=m.hand||{},out=[],W=hand.W||0,cols=s.c==='any'?COLS:[s.c];
+  if(m.trains<s.len)return out;
+  for(const c of cols){const h=hand[c]||0;for(let n=Math.min(s.len,h);n>=0;n--){const w=s.len-n;if(w>W)continue;
+    if(!depot){out.push({c,n,w,e:null});continue}
+    if(h>=n+1)out.push({c,n,w,e:c});if(W>=w+1)out.push({c,n,w,e:'W'});for(const e of COLS)if(e!==c&&(hand[e]||0)>=1)out.push({c,n,w,e})}}
+  out.sort((x,y)=>(x.w+(x.e==='W'?1:0))-(y.w+(y.e==='W'?1:0))||(y.n-x.n)||((hand[y.e]||0)-(hand[x.e]||0)));return out}
+
+/* ---- feed ---- */
+function feed(t,k=''){const f=$('feed'),li=document.createElement('li');li.className=k;li.textContent=t;f.appendChild(li);while(f.children.length>3)f.firstChild.remove();setTimeout(()=>li.remove(),6000)}
+function personal(t){const m=me();if(!m||!NET.on)return t;const n=m.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return t.replace(new RegExp('^'+n+' goes first'),'You go first').replace(new RegExp('^'+n+' '),'You ').replace(new RegExp('\\. '+n+' wins'),'. You win').replace(' for '+m.name+'.',' for you.')}
+function showFreshLog(){const fresh=Math.min((V.logN||0)-lastLogN,4);for(let i=fresh-1;i>=0;i--)if(V.log[i])feed(personal(V.log[i].t),V.log[i].k);lastLogN=V.logN||0}
+
+/* ---- events: animate what just happened ---- */
+function handleEvents(ev){
+  ev.forEach(e=>{
+    if(e.k==='drive')animateDrive(e.s,e.path,e.depot);
+    else if(e.k==='pick'){const b=$('market').querySelector(`[data-mk="${e.i}"]`);if(b)b.classList.add('pop')}
+    else if(e.k==='turn'&&e.s===0&&!V.solo)feed('Your turn!','good');
+    else if(e.k==='jam'||e.k==='fail'){const el=SEGEL[e.si];if(el){const [x,y]=[(C[SEGS[e.si].a].x+C[SEGS[e.si].b].x)/2,(C[SEGS[e.si].a].y+C[SEGS[e.si].b].y)/2];CAM.tx=WX(x);CAM.tz=WZ(y)}}
+    else if(e.k==='over')setTimeout(finalSheet,900);
+  });
+}
+function animateDrive(seat,path,depot){
+  const T=TRAIN[seat];if(!path||path.length<2)return;
+  const pts=path.map(id=>P(id));
+  T.g.visible=true;
+  if(T.anim)cancelAnimationFrame(T.anim.raf);
+  const legs=[];let total=0;
+  if(depot||T.at===null||T.at!==path[0]){ // hauled to the start: appear there, then drive the segment
+    const a=pts[pts.length-2];placeTrain(seat,a[0],a[1]);legs.push([pts[pts.length-2],pts[pts.length-1]]);
+  }else for(let i=1;i<pts.length;i++)legs.push([pts[i-1],pts[i]]);
+  legs.forEach(([a,b])=>total+=Math.hypot(b[0]-a[0],b[1]-a[1]));
+  const dur=Math.min(seat===0?3200:2200,500+total*(seat===0?4.2:3)),start=performance.now();
+  const heading0=Math.atan2(legs[0][1][1]-legs[0][0][1],legs[0][1][0]-legs[0][0][0]);
+  if(seat===0){CAM.ride={seat,heading:heading0,k:0,saved:{tx:CAM.tx,tz:CAM.tz,yaw:CAM.yaw,pitch:CAM.pitch,dist:CAM.dist}}}
+  const step=now=>{
+    let t=Math.min(1,(now-start)/dur);t=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    let d=t*total;
+    for(let i=0;i<legs.length;i++){const[a,b]=legs[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      if(d<=L||i===legs.length-1){const f=L?Math.min(1,d/L):1,hd=Math.atan2(b[1]-a[1],b[0]-a[0]);placeTrain(seat,a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,hd);if(CAM.ride&&CAM.ride.seat===seat)CAM.ride.heading=hd;break}d-=L}
+    if(t<1)T.anim.raf=requestAnimationFrame(step);
+    else{T.anim=null;T.at=path[path.length-1];placeTrain(seat,...pts[pts.length-1]);
+      if(CAM.ride&&CAM.ride.seat===seat){const sv=CAM.ride.saved;setTimeout(()=>{if(!CAM.ride||CAM.ride.seat!==seat)return;Object.assign(CAM.cur,{tx:TRAIN[seat].x,tz:TRAIN[seat].z,yaw:CAM.cur.yaw,pitch:CAM.cur.pitch,dist:CAM.cur.dist});CAM.ride=null;Object.assign(CAM,sv)},500)}}
+  };
+  T.anim={raf:requestAnimationFrame(step)};
+}
+
+/* ---- actions: the same call works solo (local engine) and online (sent to the server) ---- */
+function send(a){
+  if(NET.on){if(!netSend({t:'act',a}))feed('Not connected. Reconnecting…','danger');return}
+  if(!E)return;
+  const r=E.act(0,a,Date.now());
+  if(!r.ok){feed(r.err,'danger');return}
+  V=E.view(0);showFreshLog();handleEvents(r.ev);render();
+}
+function tapSeg(si){
+  if(!V)return;const o=V.owners[si];
+  if(jamMode){if(o!==null){feed('You can only jam a free segment.','danger');return}if(blockedV(si)){feed('That segment is already closed.','danger');return}
+    jamMode=false;send({t:'jam',si});render();return}
+  if(o!==null||!myTurn()||V.drawn){segInfo(si);return}
+  if(blockedV(si)){feed(V.fail===si?'Signal failure: closed this round.':'Jammed: closed for now.','danger');segInfo(si);return}
+  driveSheet(si);
+}
+function driveSheet(si){
+  const s=SEGS[si],m=me(),depot=!touchesV(s),opts=payOptionsV(s,depot).slice(0,4);
+  selSeg=si;render();
+  const lineDot=`<span class="lineDot" style="--c:${s.col}"></span>`;
+  const pay=o=>`<span class="pay">${o.n?`<span class="pc" style="--c:${colOf(o.c)}">${o.n}</span>`:''}${o.w?`<span class="pc W">${o.w}</span>`:''}${o.e?`<span class="pc plus">+</span><span class="pc ${o.e==='W'?'W':''}" style="--c:${colOf(o.e==='W'?'W':o.e)}">1</span>`:''}</span>`;
+  sheet(`<div class="kicker">${lineDot}${esc(s.line)} · ${s.len} car${s.len>1?'s':''} · +${PTS[s.len]} point${PTS[s.len]>1?'s':''}</div>
+  <h3>${esc(nm(s.a))} → ${esc(nm(s.b))}</h3>
+  ${m.trains<s.len?`<p class="small">You only have ${m.trains} train${m.trains===1?'':'s'} left.</p>`:
+    `<p class="small">${s.c==='any'?'This line takes any one colour.':`Costs ${s.len} ${LINES[s.c].name} pass${s.len>1?'es':''}; Smart Cards are wild.`}${depot&&m.at?' <b>Depot run:</b> your network doesn’t reach here, so it costs one extra pass of any kind.':''}</p>`}
+  ${opts.length?opts.map((o,i)=>`<button class="btn ${i?'':'primary'}" data-drive="${i}">Drive and pay ${pay(o)}</button>`).join(''):
+    `<p>You can’t pay for this yet. Take passes of this colour, or Smart Cards.</p>`}
+  <button class="btn" data-x="close">Not now</button>`);
+  $('sheetBody').querySelectorAll('[data-drive]').forEach(b=>b.onclick=()=>{const o=opts[+b.dataset.drive];closeSheet();send({t:'drive',si,o})});
+}
+function segInfo(si){
+  const s=SEGS[si],o=V.owners[si],jam=V.jams[si];
+  sheet(`<div class="kicker"><span class="lineDot" style="--c:${s.col}"></span>${esc(s.line)} · ${s.len} car${s.len>1?'s':''} · ${PTS[s.len]} pt</div><h3>${esc(nm(s.a))} → ${esc(nm(s.b))}</h3>
+  <p>${o===null?(V.fail===si?'⚠️ Signal failure: closed this round.':jam?`🚧 Jammed by ${jam.s===0?'you':esc(V.players[jam.s].name)} until round ${jam.until}.`:myTurn()&&V.drawn?'Finish drawing first; you can drive here next turn.':'Free. '+(myTurn()?'':'Wait for your turn to drive it.')):`Driven by ${o===0?'you':esc(V.players[o].name)}.`}</p>
+  <button class="btn" data-x="close">OK</button>`);
+}
+function tapStation(id){
+  const m=me(),tks=(m&&m.tickets||[]).filter(t=>t.a===id||t.b===id);
+  sheet(`<div class="kicker">${[...linesAt[id]].map(l=>`<span class="lineDot" style="--c:${SEGS.find(s=>s.line===l).col}"></span>`).join('')}${[...linesAt[id]].join(' · ')}</div><h3>${esc(nm(id))}</h3>
+  ${tks.length?`<p>Your ticket${tks.length>1?'s':''} here: ${tks.map(t=>`<b>${esc(nm(t.a))} – ${esc(nm(t.b))}</b> (${t.p})`).join(', ')}.</p>`:'<p class="small">Interchanges are where lines meet: a network through one can switch lines for free.</p>'}
+  <button class="btn" data-x="close">OK</button>`);
+}
+function ticketSheet(){
+  const m=me(),off=V.offer;
+  if(off){ // choose which to keep
+    const key=JSON.stringify(off.list);if(key!==NET.offerKey){NET.offerKey=key;NET.keep=new Set()}
+    const keep=NET.keep;
+    const html=()=>`<div class="kicker">Destination tickets · keep at least ${off.min}</div><h3>${off.initial?'Where will you drive?':'New tickets'}</h3>
+    <p class="small">A ticket scores its points if your network joins both stations by the end, and loses them if not.${NET.on&&V.phase==='tickets'?' '+mmss(V.ticketEnds-netNow())+' left.':''}</p>
+    ${off.list.map((t,i)=>`<button class="tk ${keep.has(i)?'on':''}" data-keep="${i}"><span class="box">${keep.has(i)?'✓':''}</span><span><b>${esc(nm(t.a))} – ${esc(nm(t.b))}</b><span class="sub">${t.long?'long ticket · ':''}${dijkstra(SEGS,t.a,t.b,s=>s.len).cost} cars by the shortest way</span></span><span class="pts">${t.p}</span></button>`).join('')}
+    <button class="btn primary" data-x="keep" ${keep.size<off.min?'disabled':''}>Keep ${keep.size} ticket${keep.size===1?'':'s'}</button>`;
+    sheet(html(),true);
+    const wire=()=>{$('sheetBody').querySelectorAll('[data-keep]').forEach(b=>b.onclick=()=>{const i=+b.dataset.keep;keep.has(i)?keep.delete(i):keep.add(i);$('sheetBody').innerHTML=html();wire();highlightOffer()});
+      const k=$('sheetBody').querySelector('[data-x="keep"]');if(k)k.onclick=()=>{if(keep.size<off.min)return;const idx=[...keep];NET.offerKey=null;closeSheet(true);send({t:'keep',idx})}};
+    wire();highlightOffer();return;
+  }
+  sheet(`<div class="kicker">Your tickets</div><h3>${m.tickets.length?'Destinations':'No tickets yet'}</h3>
+  ${m.tickets.map((t,i)=>`<div class="tk ${m.done[i]?'ok':''}"><span class="box">${m.done[i]?'✓':''}</span><span><b>${esc(nm(t.a))} – ${esc(nm(t.b))}</b><span class="sub">${m.done[i]?'connected':'not connected yet'}</span></span><span class="pts">${m.done[i]?'+':'−'}${t.p}</span></div>`).join('')}
+  ${myTurn()&&!V.drawn&&V.ticketDeckN?'<button class="btn primary" data-x="tix">Draw 3 new tickets (keep at least 1)</button>':''}
+  <button class="btn" data-x="close">Close</button>`);
+}
+function highlightOffer(){const off=V&&V.offer;IDS.forEach(id=>{STNEL[id].ring.visible=false});if(!off)return;off.list.forEach((t,i)=>{if(NET.keep.has(i))[t.a,t.b].forEach(id=>{const r=STNEL[id].ring;r.visible=true;r.userData.ok=false;r.material.color.set('#ffc933')})})}
+
+/* ---- sheets ---- */
+const sheetEl=$('sheet'),scrim=$('scrim');let sheetLocked=false;
+function sheet(html,locked){$('sheetBody').innerHTML=html;sheetEl.classList.add('on');scrim.classList.add('on');sheetLocked=!!locked;
+  $('sheetBody').querySelectorAll('[data-x]').forEach(b=>{const k=b.dataset.x;
+    if(k==='close')b.onclick=()=>closeSheet();
+    else if(k==='tix')b.onclick=()=>{closeSheet();send({t:'tickets'})};
+    else if(k==='help')b.onclick=()=>helpSheet();
+    else if(k==='start')b.onclick=()=>startSheet();
+    else if(k==='online')b.onclick=()=>onlineSheet();
+    else if(k==='joincode')b.onclick=()=>onlineSheet('',true);
+    else if(k==='rejoin')b.onclick=()=>{const st=store.get('metro-online');if(st)netConnect(st.code,st.token)};
+    else if(k==='create')b.onclick=()=>netCreate();
+    else if(k==='join')b.onclick=()=>netJoin();
+    else if(k==='netstart')b.onclick=()=>netSend({t:'start'});
+    else if(k==='again')b.onclick=()=>netSend({t:'again'});
+    else if(k==='leave')b.onclick=()=>{netSend({t:'leave'});netLeave('')};
+    else if(k==='copy')b.onclick=()=>{const i=b.parentElement.querySelector('input'),done=()=>{b.textContent='Copied!';setTimeout(()=>b.textContent='Copy',1600)};
+      if(navigator.clipboard)navigator.clipboard.writeText(i.value).then(done,()=>{i.select();document.execCommand('copy');done()});else{i.select();document.execCommand('copy');done()}};
+    else if(k==='share')b.onclick=()=>navigator.share({title:'Junction: Delhi Metro',text:`Join my metro room ${NET.code}`,url:roomLink()}).catch(()=>{});
+    else if(k==='log')b.onclick=()=>logSheet();
+    else if(k==='scores')b.onclick=()=>finalSheet();
+    else if(k==='tickets')b.onclick=()=>ticketSheet();
+    else if(k==='theme')b.onclick=()=>{const d=document.documentElement,cur=d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');d.dataset.theme=cur==='dark'?'light':'dark';store.set('metro-theme',d.dataset.theme)};
+  });
+  $('sheetBody').querySelectorAll('[data-pickmode]').forEach(b=>b.onclick=()=>{NET.pickMode=b.dataset.pickmode;$('sheetBody').querySelectorAll('[data-pickmode]').forEach(x=>{const on=x.dataset.pickmode===NET.pickMode;x.classList.toggle('sel',on);x.setAttribute('aria-pressed',on)})});
+  $('sheetBody').querySelectorAll('[data-netmode]').forEach(b=>b.onclick=()=>netSend({t:'mode',mode:b.dataset.netmode}));
+}
+function closeSheet(force){if(sheetLocked&&!force)return;sheetEl.classList.remove('on');scrim.classList.remove('on');sheetLocked=false;if(selSeg!==null){selSeg=null;render()}
+  if(V&&V.offer&&!force)setTimeout(ticketSheet,0)}
+const sheetOpen=()=>sheetEl.classList.contains('on');
+scrim.onclick=()=>closeSheet();
+const modeBtns=(sel,attr)=>Object.values(MODES).map(m=>`<button class="btn ${m.id===sel?'sel':''}" data-${attr}="${m.id}" aria-pressed="${m.id===sel}">${m.name}<small>${m.blurb} · ${m.trains} trains</small></button>`).join('');
+function startSheet(){
+  const st=store.get('metro-online');
+  sheet(`<h1>Junction<br>Delhi Metro</h1><p class="small">Drive the metro. Claim the lines. Finish your tickets.</p>
+  <div class="kicker">Play solo against 3 robots</div><div class="modes">${modeBtns(SOLO_MODE,'solo-mode')}</div>
+  ${canOnline()?`<div class="kicker">Play with friends</div><button class="btn primary" data-x="online">Play online<small>Up to 4 players, robots fill the rest</small></button>
+  ${st&&st.code?`<button class="btn" data-x="rejoin">Rejoin room ${esc(st.code)}<small>Pick up where you left off</small></button>`:`<button class="btn" data-x="joincode">Join with a code<small>A friend sent you 4 letters</small></button>`}`:''}
+  <button class="btn" data-x="help">How to play</button>
+  ${V&&!V.over&&(E||NET.on)?'<button class="btn" data-x="close">Back to the game</button>':''}`,true);
+  $('sheetBody').querySelectorAll('[data-solo-mode]').forEach(b=>b.onclick=()=>{SOLO_MODE=b.dataset.soloMode;store.set('metro-mode',SOLO_MODE);closeSheet(true);newSolo(SOLO_MODE)});
+}
+function helpSheet(){
+  sheet(`<div class="kicker">How to play</div><h3>You’re a metro driver</h3>
+  <ul class="rules">
+  <li><b>Each turn, do one thing:</b> take 2 passes (face-up or from the deck), or drive one segment.</li>
+  <li><b>Driving</b> a segment costs passes of its line colour, one per car. <b>Smart Cards</b> are wild. Grey, Aqua and Rapid Metro take any one colour.</li>
+  <li>Drive on from where your trains already are. Starting somewhere new is a <b>depot run</b>: one extra pass of any kind.</li>
+  <li><b>Tickets</b> name two stations. Join them with your network for the points; unfinished tickets count against you.</li>
+  <li>Segments score 1 / 2 / 4 / 7 for 1–4 cars. Longest unbroken line: +10. When someone has 2 trains left, everyone gets one more turn.</li>
+  <li><b>Signal failures</b> close a random free segment every third round. Everyone has one <b>🚧 Jam</b>: close a free segment for 2 rounds.</li>
+  </ul><button class="btn primary" data-x="${V?'close':'start'}">${V?'Got it':'Back'}</button>`);
+}
+function logSheet(){sheet(`<div class="kicker">Game log</div><ul class="logl">${(V?V.log:[]).map(l=>`<li class="${l.k}">${esc(personal(l.t))}</li>`).join('')||'<li>Nothing yet.</li>'}</ul><button class="btn" data-x="close">Close</button>`)}
+function menuSheet(){
+  sheet(`<div class="kicker">${NET.on?'Online room '+esc(NET.code||''):'Solo game'}</div><h3>Menu</h3>
+  ${NET.on&&NET.code?`<div class="share"><input readonly value="${esc(roomLink())}" aria-label="Invite link"><button class="btn" data-x="copy">Copy</button>${navigator.share?'<button class="btn" data-x="share">Share</button>':''}</div>`:''}
+  ${V&&V.over?'<button class="btn primary" data-x="scores">Final scores</button>':''}
+  <div class="row2"><button class="btn" data-x="tickets">My tickets</button><button class="btn" data-x="log">Game log</button></div><div style="height:10px"></div>
+  <div class="row2"><button class="btn" data-x="help">How to play</button><button class="btn" data-x="theme">Light / dark</button></div><div style="height:10px"></div>
+  ${NET.on?'<button class="btn danger" data-x="leave">Leave room<small>A robot takes your seat</small></button>':'<button class="btn" data-x="start">New game</button>'}
+  <button class="btn" data-x="close">Close</button>`);
+}
+function finalSheet(){
+  if(!V||!V.final)return;
+  const rows=V.final,who=s=>s===0?'You':esc(V.players[s].name),w=rows[0],ex=rows.filter(r=>r.ex).map(r=>who(r.s));
+  sheet(`<div class="kicker">Final scores · ${MODES[V.mode].name}${NET.on?' · room '+esc(NET.code):''}</div><h3>${w.s===0?'You win! 🎉':who(w.s)+' wins'}</h3>
+  <p class="small">Longest unbroken line: ${V.maxL} cars, ${ex.join(' and ')} +10.</p>
+  <table class="score"><tr><th>Driver</th><th>Lines</th><th>Tickets</th><th>Longest</th><th>Total</th></tr>
+  ${rows.map(r=>`<tr><td><span class="who"><span class="av" style="background:${V.players[r.s].col}"></span>${who(r.s)}</span></td><td>${r.rp}</td><td>${r.tp>0?'+':''}${r.tp}</td><td>${r.ex?'+10':'0'}</td><td class="tot">${r.total}</td></tr>`).join('')}</table>
+  <ul class="rules small">${rows.map(r=>`<li><b>${who(r.s)}:</b> ${(V.players[r.s].tickets||[]).map((t,i)=>`${r.det[i]?'✓':'✗'} ${esc(nm(t.a))}–${esc(nm(t.b))} (${t.p})`).join(' · ')||'no tickets'}</li>`).join('')}</ul>
+  ${NET.on?(NET.room&&NET.room.host?'<button class="btn primary" data-x="again">Play again in this room</button>':'<p class="small">The host can start another game in this room.</p>')+'<button class="btn" data-x="leave">Leave room</button>':
+    `<div class="modes">${modeBtns(SOLO_MODE,'solo-mode')}</div>`}
+  <button class="btn" data-x="close">Look at the map</button>`);
+  $('sheetBody').querySelectorAll('[data-solo-mode]').forEach(b=>b.onclick=()=>{SOLO_MODE=b.dataset.soloMode;store.set('metro-mode',SOLO_MODE);closeSheet(true);newSolo(SOLO_MODE)});
+}
+
+/* ---- solo: the same engine the server runs, driven by a timer in this tab ---- */
+function newSolo(mode){
+  if(NET.on)netLeave('');
+  E=makeEngine();E.newGame([{name:'You'},{name:'Rose',bot:true},{name:'Sandy',bot:true},{name:'Mint',bot:true}],mode,Date.now(),{solo:true});
+  TRAIN.forEach(T=>{T.at=null;if(T.anim)cancelAnimationFrame(T.anim.raf);T.anim=null;T.g.visible=false});CAM.ride=null;CAM.home();
+  jamMode=false;selSeg=null;NET.offerKey=null;NET.keep=new Set();NET.finalShown=false;
+  V=E.view(0);lastLogN=V.logN;render();ticketSheet();
+}
+setInterval(()=>{
+  if(E&&!NET.on&&V&&!V.over){const ev=E.tick(Date.now());if(ev.length){V=E.view(0);showFreshLog();handleEvents(ev);render();if(V.offer&&!sheetOpen())ticketSheet()}}
+  if(NET.on&&V)renderTop();
+},120);
+
+/* ---- online ---- */
+const roomLink=()=>location.origin+location.pathname+'?room='+NET.code;
+function onlineSheet(prefCode,focusCode){
+  sheet(`<div class="kicker">Play online</div><h3>Ride with friends</h3>
+  <p class="small">Up to 4 players. Robots fill empty seats and take over if someone drops out or runs out of time.</p>
+  <label class="field"><span>Your name</span><input id="netName" maxlength="14" autocomplete="nickname" placeholder="e.g. Asha" value="${esc(store.get('metro-name')||'')}"></label>
+  <div class="kicker">Game length (for a new room)</div><div class="modes">${modeBtns(NET.pickMode,'pickmode')}</div>
+  <button class="btn primary" data-x="create">Create a room</button>
+  <div class="kicker">or join a friend’s room</div>
+  <div class="joinrow"><input id="netCode" class="code" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code" value="${esc(prefCode||'')}"><button class="btn" data-x="join">Join</button></div>
+  <p class="small" id="netMsg" role="alert"></p>
+  <button class="btn" data-x="start">Back</button>`,true);
+  setTimeout(()=>{const n=$('netName');if(focusCode&&n&&n.value)$('netCode').focus();else if(n)n.focus()},60);
+  $('sheetBody').addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='netCode'){e.preventDefault();netJoin()}else if(e.target.id==='netName'){e.preventDefault();(($('netCode').value||'').trim()?netJoin:netCreate)()}});
+}
+const netMsg=t=>{const m=$('netMsg');if(m)m.textContent=t};
+function netName(){const n=(($('netName')&&$('netName').value)||'').trim().slice(0,14);if(!n){netMsg('Type your name first.');$('netName')&&$('netName').focus();return null}store.set('metro-name',n);return n}
+async function netCreate(){
+  if(!netName())return;netMsg('Creating a room…');
+  try{const r=await fetch('/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:'metro',mode:NET.pickMode})});const j=await r.json();
+    if(!r.ok||!j.code)throw new Error(j.error||'The server said no.');netConnect(j.code,null)}
+  catch(e){netMsg('Couldn’t create a room: '+e.message)}
+}
+async function netJoin(){
+  const code=(($('netCode')&&$('netCode').value)||'').toUpperCase().replace(/[^A-Z]/g,'');
+  if(code.length!==4){netMsg('Room codes are 4 letters.');$('netCode')&&$('netCode').focus();return}
+  if(!netName())return;netMsg('Looking for room '+code+'…');
+  try{const r=await fetch('/api/rooms/'+code);const j=await r.json();
+    if(!r.ok||!j.exists){netMsg('There’s no room '+code+'. Check the code, or create a new room.');return}
+    if(j.game&&j.game!=='metro'){netMsg('Room '+code+' is a Junction 3D (Europe) room. Opening it there…');setTimeout(()=>location.href='junction3d.html?room='+code,900);return}
+    if(j.over)netMsg('That game has finished. Ask the host to start another one.');
+    const st=store.get('metro-online');netConnect(code,st&&st.code===code?st.token:null)}
+  catch(e){netMsg('Couldn’t reach the server: '+e.message)}
+}
+function netConnect(code,token){
+  E=null;NET.on=true;NET.code=code;NET.token=token||null;NET.closing=false;NET.room=null;NET.retry=0;NET.gameKey=null;
+  store.set('metro-online',{code,token:NET.token,t:Date.now()});
+  history.replaceState(null,'',location.pathname+'?room='+code);
+  sheet(`<div class="kicker">Room ${esc(code)}</div><h3>Connecting…</h3><button class="btn" data-x="leave">Cancel</button>`,true);
+  netOpen();
+}
+function netOpen(){
+  const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/api/rooms/'+NET.code+'/ws');NET.ws=ws;
+  ws.onopen=()=>ws.send(JSON.stringify({t:'join',name:store.get('metro-name')||'Player',token:NET.token}));
+  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}NET.retry=0;netOnMsg(m)};
+  ws.onclose=()=>{if(NET.ws!==ws)return;NET.ws=null;if(!NET.on||NET.closing)return;NET.retry++;setTimeout(()=>{if(NET.on&&!NET.ws)netOpen()},Math.min(8000,500*2**Math.min(NET.retry,4)))};
+}
+const netSend=o=>{if(NET.ws&&NET.ws.readyState===1){NET.ws.send(JSON.stringify(o));return true}return false};
+function netOnMsg(m){
+  if(m.t==='sync'){
+    NET.skew=m.now-Date.now();NET.room=m.room;
+    if(m.room.token&&m.room.token!==NET.token){NET.token=m.room.token;store.set('metro-online',{code:NET.code,token:NET.token,t:Date.now()})}
+    if(m.room.phase==='lobby'||!m.v){NET.gameKey=null;netLobby();return}
+    netApply(m.v,m.ev||[]);
+  }
+  else if(m.t==='emote')feed(`${m.s===0?'You':m.name}: ${m.e}`);
+  else if(m.t==='err')feed(m.msg,'danger');
+  else if(m.t==='bye')netLeave(m.msg,m.keep);
+}
+function netLeave(msg,keepSeat){
+  NET.closing=true;if(NET.ws){try{NET.ws.close()}catch(e){}}
+  Object.assign(NET,{on:false,ws:null,room:null,gameKey:null,offerKey:null,code:null});
+  if(!keepSeat)store.del('metro-online');history.replaceState(null,'',location.pathname);
+  V=null;E=null;TRAIN.forEach(T=>{T.g.visible=false;T.at=null});CAM.ride=null;
+  $('players').innerHTML='';$('market').innerHTML='';$('hand').innerHTML='';renderTop();renderStatus();
+  startSheet();if(msg)feed(msg,'danger');
+}
+function netLobby(){
+  const R=NET.room,humans=R.seats.filter(Boolean).length;
+  sheet(`<div class="kicker">Online room · ${R.host?'you’re the host':'waiting for the host'}</div><h3>Room <span class="code">${esc(R.code)}</span></h3>
+  <p class="small">Send friends this link or the code. Up to 4 players.</p>
+  <div class="share"><input readonly value="${esc(roomLink())}" aria-label="Invite link"><button class="btn" data-x="copy">Copy</button>${navigator.share?'<button class="btn" data-x="share">Share</button>':''}</div>
+  <div class="seats">${[0,1,2,3].map(i=>{const s=R.seats[i];return`<div class="seat ${s?'':'empty'}"><span class="av" style="background:${SEAT_COLS[i]}"></span><span>${s?esc(s.name)+(i===R.you?' (you)':''):'A robot plays here'}</span>${s&&s.host?'<span class="tag">Host</span>':''}${s&&!s.online?'<span class="off">offline</span>':''}</div>`}).join('')}</div>
+  <div class="kicker">Game length</div><div class="modes">${Object.entries(R.modes).map(([k,m])=>`<button class="btn ${k===R.mode?'sel':''}" data-netmode="${k}" ${R.host?'':'disabled'} aria-pressed="${k===R.mode}">${esc(m.name)}<small>${esc(m.blurb)} · ${m.trains} trains · ${m.turnSec}s turns</small></button>`).join('')}</div>
+  ${R.host?`<button class="btn primary" data-x="netstart">Start the game${humans<4?`<small>robots take ${4-humans} seat${4-humans>1?'s':''}</small>`:''}</button>`:'<p class="small">The host starts the game when everyone’s in.</p>'}
+  <button class="btn" data-x="leave">Leave room</button>`,true);
+}
+function netApply(v,ev){
+  const fresh=NET.gameKey!==v.startedAt;
+  V=v;
+  if(fresh){NET.gameKey=v.startedAt;lastLogN=Math.max(0,(v.logN||0)-2);NET.offerKey=null;NET.keep=new Set();NET.finalShown=v.over;jamMode=false;selSeg=null;
+    TRAIN.forEach(T=>{T.at=null;if(T.anim)cancelAnimationFrame(T.anim.raf);T.anim=null});CAM.ride=null;CAM.home();if(sheetOpen())closeSheet(true)}
+  showFreshLog();handleEvents(ev);render();
+  if(v.offer){if(!sheetOpen()||$('sheetBody').querySelector('[data-keep]'))ticketSheet()}
+  else if($('sheetBody').querySelector('[data-keep]'))closeSheet(true);
+  if(v.over&&!NET.finalShown){NET.finalShown=true;setTimeout(finalSheet,1000)}
+}
+
+/* ---- wiring ---- */
+$('market').addEventListener('click',e=>{const b=e.target.closest('[data-mk]');if(!b||!V)return;
+  if(!myTurn()){feed(V.phase==='tickets'?'Choose your tickets first.':'Wait for your turn.','danger');return}
+  const k=b.dataset.mk;
+  if(k==='deck'){if(V.deckN+V.discardN<1){feed('The deck is empty.','danger');return}send({t:'deck'});return}
+  if(k==='tix'){if(V.drawn){feed('Finish drawing passes first.','danger');return}if(!V.ticketDeckN){feed('No tickets left.','danger');return}ticketSheet();return}
+  const i=+k,c=V.market[i];if(!c)return;if(c==='W'&&V.drawn===1){feed('A face-up Smart Card can’t be your second pass.','danger');return}
+  send({t:'market',i});
+});
+$('hand').addEventListener('click',e=>{const b=e.target.closest('#jamBtn');if(!b||b.disabled)return;jamMode=!jamMode;render()});
+$('menuBtn').onclick=()=>menuSheet();
+$('logBtn').onclick=()=>logSheet();
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+function netBoot(){
+  const q=new URLSearchParams(location.search).get('room');if(!q)return false;
+  const code=q.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
+  if(!canOnline()){onlineSheet(code);return true}
+  const st=store.get('metro-online');
+  if(st&&st.code===code&&st.token&&store.get('metro-name')){netConnect(code,st.token);return true}
+  onlineSheet(code,true);return true;
+}
+async function boot(){
+  const th=store.get('metro-theme');if(th)document.documentElement.dataset.theme=th;
+  try{await Promise.race([Promise.all([document.fonts.load('800 14px Nunito'),document.fonts.load('700 20px Fredoka')]),new Promise(r=>setTimeout(r,2000))])}catch(e){}
+  buildMap();resize();requestAnimationFrame(frame);$('boot').remove();
+  if(!netBoot()){if(!store.get('metro-help-seen')){store.set('metro-help-seen',1);helpSheet()}else startSheet()}
+}
+boot();
+/* test hooks */
+window.J={get V(){return V},get E(){return E},get NET(){return NET},send,newSolo,netSend,tapSeg,payOptionsV,touchesV,blockedV,myTurn,ticketSheet,closeSheet,SEGS,C,MODES,
+  keepAll(){if(!V||!V.offer)return false;NET.keep=new Set(V.offer.list.map((_,i)=>i));NET.offerKey=JSON.stringify(V.offer.list);send({t:'keep',idx:[...NET.keep]});return true}};
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // Junction online: Cloudflare Worker + one Durable Object per room.
-//   POST /api/rooms {game, mode}  -> {code}            create a room (4-letter code); game = 'europe' (Junction 3D) or 'metro'
+//   POST /api/rooms {game, mode}  -> {code}            create a room (4-letter code); game = 'europe' (Junction 3D), 'metro' or 'live'
 //   GET  /api/rooms/:code         -> {exists, phase,…}  peek before joining
 //   GET  /api/rooms/:code/ws      -> WebSocket          play (protocol below)
 //   anything else                 -> the static site in public/
@@ -14,10 +14,11 @@
 import { DurableObject } from 'cloudflare:workers';
 import * as EUROPE from './rules.gen.js';
 import * as METRO from '../metro/rules.js';
+import * as LIVE from '../metro/live.js';
 
-// Two games share the Worker and the Room code: the Europe 3D game and Junction: Delhi Metro. A room is created
-// for one game and keeps it; each page only joins rooms of its own game (the /info peek says which).
-const GAMES = { europe: EUROPE, metro: METRO };
+// Three games share the Worker and the Room code: the Europe 3D game, Junction: Delhi Metro (turns) and Rush Hour Live
+// (real time). A room is created for one game and keeps it; each page only joins rooms of its own game(s) (the /info peek says which).
+const GAMES = { europe: EUROPE, metro: METRO, live: LIVE };
 const gameOf = (g) => (GAMES[g] ? g : 'europe');
 const MAX_SEATS = 4;
 

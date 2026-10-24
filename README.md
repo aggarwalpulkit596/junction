@@ -18,7 +18,19 @@ are ours. No build step to *play*: each game is a single HTML file.
 | Saboteur Express (2D) | `junction-saboteur.html` | solo |
 | Saboteur Express 3D | `junction3d-saboteur.html` (generated) | solo |
 
-## Delhi Metro in one minute
+## Rush Hour Live in one minute (the default)
+
+- **No turns.** Everyone drives at once for **3 rounds of 3 minutes**; the best total wins the commute.
+- A pass arrives **every few seconds**. Extra passes float above stations: the first train to stand there takes them.
+- **Tap a glowing segment to drive it** the moment you can pay: one pass of its line colour per car, Smart Cards are wild. First tap takes it.
+- Your train takes real time to travel (about a second per car). Tap a station on your own line to go and fetch a floating pass.
+- Two secret **tickets** per round: + if your line joins both stations, − if not. Segments score 1 / 2 / 4 / 7; longest line +10.
+- **Signal failures** close a segment for 12 seconds every half minute; one **🚧 Jam** per round closes a free segment for 20 seconds.
+
+`mp/live-sim.mjs` plays commutes with four robots on a virtual clock: rounds run about 165 seconds, ~44 of 66 segments
+get claimed, robots end a round with under one train left. No stalls.
+
+## Turn by turn in one minute
 
 - **Each turn, one thing:** take 2 passes (face-up or from the deck), or **drive** one free segment that touches your network.
 - A segment costs one pass of its line colour per car; **Smart Cards** are wild. Grey Line, Aqua Line and Rapid Metro take any one colour.

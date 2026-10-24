@@ -59,6 +59,13 @@ button:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:3px so
 .mcard.pop{animation:pop .4s}
 #app.mine .mcard:not(.empty){cursor:pointer}
 #app:not(.mine) .mcard{opacity:.78}
+#market.live{grid-template-columns:1.25fr 1fr 1fr}
+.lt{background:var(--panel);color:var(--ink);text-shadow:none;gap:2px}
+.lt b{font-family:'Fredoka';font-size:19px;font-weight:700;line-height:1}
+.lt.hot b{color:var(--danger)}
+.lt .bar{width:80%;height:6px;background:var(--card);border-radius:3px;overflow:hidden;margin-top:3px}
+.lt .bar i{display:block;height:100%;background:var(--accent);transition:width .25s linear}
+#app:not(.mine) .lt{opacity:1}
 @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
 /* map (3D) */
 #mapWrap{flex:1;min-height:0;position:relative;margin:2px 8px 0;border-radius:16px;background:var(--mapbg);border:2.5px solid var(--outline);overflow:hidden}
@@ -196,11 +203,16 @@ const SHORT_NAME={R:'Red',Y:'Yel',B:'Blue',G:'Grn',V:'Vio',P:'Pink',M:'Mag',O:'O
 /* ---- state: V is the current view (from the local engine or the server); the UI renders only from V ---- */
 let V=null,E=null,SOLO_MODE=store.get('metro-mode')||'rush',jamMode=false,selSeg=null,lastLogN=0,barKey='';
 const app=$('app');
-const NET={on:false,ws:null,code:null,token:null,room:null,skew:0,retry:0,closing:false,pickMode:'rush',gameKey:null,finalShown:false,offerKey:null,keep:new Set()};
+const NET={on:false,ws:null,code:null,token:null,room:null,skew:0,retry:0,closing:false,pickMode:'live',roundShown:null,gameKey:null,finalShown:false,offerKey:null,keep:new Set()};
 const netNow=()=>Date.now()+NET.skew;
 const canOnline=()=>/^https?:$/.test(location.protocol);
 const me=()=>V&&V.players[0];
 const myTurn=()=>!!V&&V.phase==='play'&&V.turn===0&&!V.over&&!V.offer;
+const LIVE=()=>!!V&&V.game==='live';
+const nowT=()=>NET.on?netNow():Date.now();
+const canActLive=()=>LIVE()&&V.phase==='play'&&!V.over&&!me().moving;
+const RIDE={on:store.get('metro-ride')!==false};
+const FLOATS=new Map();
 
 /* ---- map geometry (map units: 1000×1300, y grows south) ---- */
 const P=id=>[C[id].x,C[id].y];
@@ -357,6 +369,22 @@ function pickAt(cx,cy){const r=canvas.getBoundingClientRect();const v=new THREE.
 }
 // where a train should stand at a station (each seat gets its own corner)
 const SEAT_OFF=[[-16,-16],[16,-16],[-16,16],[16,16]];
+function startAnim(seat,path,t0,t1,o={}){
+  const T=TRAIN[seat];if(!path||path.length<2)return;
+  const pts=path.map(id=>P(id));let legs=[];
+  if(o.depot||T.at===null||T.at!==path[0]){const a=pts[pts.length-2];placeTrain(seat,a[0],a[1]);legs=[[pts[pts.length-2],pts[pts.length-1]]]}
+  else for(let i=1;i<pts.length;i++)legs.push([pts[i-1],pts[i]]);
+  const lens=legs.map(([a,b])=>Math.hypot(b[0]-a[0],b[1]-a[1])),total=lens.reduce((a,b)=>a+b,0);
+  T.g.visible=true;T.anim={path,legs,lens,total,t0,t1,ease:!!o.ease};
+  if(o.ride&&seat===0&&RIDE.on&&!CAM.ride){const [a,b]=legs[0];CAM.ride={seat,heading:Math.atan2(b[1]-a[1],b[0]-a[0]),k:0,saved:{tx:CAM.tx,tz:CAM.tz,yaw:CAM.yaw,pitch:CAM.pitch,dist:CAM.dist}}}
+}
+function endRide(seat){const r=CAM.ride;if(!r||r.seat!==seat)return;setTimeout(()=>{if(!CAM.ride||CAM.ride.seat!==seat)return;const sv=CAM.ride.saved;Object.assign(CAM.cur,{tx:TRAIN[seat].x,tz:TRAIN[seat].z,yaw:CAM.cur.yaw,pitch:CAM.cur.pitch,dist:CAM.cur.dist});CAM.ride=null;Object.assign(CAM,sv)},400)}
+function syncFloats(){
+  const want=new Map((V.floats||[]).map(f=>[f.id,f.c]));
+  for(const [id,sp] of FLOATS){if(want.get(id)!==sp.userData.c){G.trains.remove(sp);sp.material.map.dispose();sp.material.dispose();FLOATS.delete(id)}}
+  for(const [id,c] of want){if(FLOATS.has(id))continue;const sp=labelSprite(c==='W'?'Smart':SHORT_NAME[c],{bg:colOf(c),color:c==='W'||c==='Y'?'#1c1d33':'#fff',size:24,fs:46,order:7});
+    sp.userData.c=c;sp.userData.base0=sp.userData.base.slice();sp.position.set(WX(C[id].x),DECK_Y+40,WZ(C[id].y));G.trains.add(sp);FLOATS.set(id,sp)}
+}
 function placeTrain(i,x,y,heading){const T=TRAIN[i];T.x=WX(x)+SEAT_OFF[i][0];T.z=WZ(y)+SEAT_OFF[i][1];T.g.position.set(T.x,DECK_Y+1,T.z);if(heading!==undefined)T.g.rotation.y=-heading}
 function frame(){
   const now=performance.now();if(frame.lk===undefined)frame.lk=0;
@@ -365,23 +393,30 @@ function frame(){
   SEGEL.forEach(el=>{if(!el.can)return;el.cars.forEach(c=>{c.position.y=c.userData.baseY+2+pulse*3;c.scale.setScalar(1+pulse*.08)})});
   Object.values(STNEL).forEach(el=>{if(el.ring.visible&&!el.ring.userData.ok)el.ring.material.opacity=.6+.4*Math.sin(now/300)});
   const lk=Math.max(.85,Math.min(2.4,CAM.cur.dist/1000));if(Math.abs(lk-frame.lk)>.02){frame.lk=lk;Object.values(STNEL).forEach(el=>{const b=el.label.userData.base;el.label.scale.set(b[0]*lk,b[1]*lk,1)});SEGEL.forEach(el=>{const b=el.badge.userData.base;el.badge.scale.set(b[0]*lk,b[1]*lk,1)})}
+  const tn=nowT();
+  TRAIN.forEach((T,i)=>{const A=T.anim;if(!A)return;const f=Math.min(1,(tn-A.t0)/Math.max(1,A.t1-A.t0)),e=A.ease?(f<.5?2*f*f:1-Math.pow(-2*f+2,2)/2):f;
+    let d=e*A.total;for(let k=0;k<A.legs.length;k++){const[a,b]=A.legs[k],L=A.lens[k];if(d<=L||k===A.legs.length-1){const q=L?Math.min(1,d/L):1,hd=Math.atan2(b[1]-a[1],b[0]-a[0]);placeTrain(i,a[0]+(b[0]-a[0])*q,a[1]+(b[1]-a[1])*q,hd);if(CAM.ride&&CAM.ride.seat===i)CAM.ride.heading=hd;break}d-=L}
+    if(f>=1){T.anim=null;T.at=A.path[A.path.length-1];placeTrain(i,...P(T.at));endRide(i)}});
+  const fk=frame.lk||1;FLOATS.forEach((sp,id)=>{sp.position.y=DECK_Y+40+Math.sin(now/350+C[id].x)*5;const b=sp.userData.base0;sp.scale.set(b[0]*fk,b[1]*fk,1)});
   placeCamera();renderer.render(scene,camera);requestAnimationFrame(frame);
 }
 /* ---- rendering from V ---- */
 function render(){
   if(!V)return;
-  const m=me(),mine=myTurn()&&!V.drawn,mine2=myTurn();
+  const m=me(),live=LIVE(),mine=live?canActLive():myTurn()&&!V.drawn,mine2=live?V.phase==='play'&&!V.over:myTurn();
   app.classList.toggle('mine',mine2);
   // players
   $('players').innerHTML=V.players.map((p,i)=>`<div class="pl ${V.phase==='play'&&V.turn===i&&!V.over?'turn':''} ${p.away?'away':''}" title="${esc(p.name)}">
-    <span class="av" style="background:${p.col}">${esc((i?p.name:'You')[0])}</span><span class="txt"><span class="nm">${i?esc(p.name):'You'}${p.bot?' <span class="bot">robot</span>':''}</span><span class="st">${p.trains}🚆 ${p.handN}🎫 ${p.pts}★</span></span></div>`).join('');
+    <span class="av" style="background:${p.col}">${esc((i?p.name:'You')[0])}</span><span class="txt"><span class="nm">${i?esc(p.name):'You'}${p.bot?' <span class="bot">robot</span>':''}</span><span class="st">${live?`${p.trains}🚆 ${p.pts}★ ${'●'.repeat(p.wins)}${'○'.repeat(Math.max(0,V.rounds-p.wins))}`:`${p.trains}🚆 ${p.handN}🎫 ${p.pts}★`}</span></span></div>`).join('');
   // market
+  if(live){$('market').className='live';$('market').innerHTML=`<div class="mcard lt" id="ltClock"><b>0:00</b><small>Round ${V.round}/${V.rounds}</small></div><div class="mcard lt" id="ltPass"><b>+1 pass</b><small>next in</small><span class="bar"><i></i></span></div><div class="mcard lt"><b>${m.pts}★</b><small>${m.trains} trains left</small></div>`;liveStrip()}
+  else{$('market').className='';
   const cards=V.market.map((c,i)=>c?`<button class="mcard ${c==='W'?'W':''}" data-mk="${i}" style="${c==='W'?'':'background:'+colOf(c)}" aria-label="Take a ${cname(c)} pass">${c==='W'?'Smart<small>Card</small>':esc(cname(c))+'<small>pass</small>'}</button>`:'<div class="mcard empty">—</div>').join('');
-  $('market').innerHTML=cards+`<button class="mcard deck" data-mk="deck" aria-label="Draw from the deck">Deck<small>${V.deckN+V.discardN}</small></button><button class="mcard tix" data-mk="tix" aria-label="Draw destination tickets">Tickets<small>${V.ticketDeckN} left</small></button>`;
+  $('market').innerHTML=cards+`<button class="mcard deck" data-mk="deck" aria-label="Draw from the deck">Deck<small>${V.deckN+V.discardN}</small></button><button class="mcard tix" data-mk="tix" aria-label="Draw destination tickets">Tickets<small>${V.ticketDeckN} left</small></button>`;}
   // hand
   const hand=m.hand||{};
   $('hand').innerHTML=COLS.concat('W').map(c=>`<div class="chip ${c==='W'?'W':''} ${hand[c]?'':'zero'}" style="--c:${colOf(c)}" data-chip="${c}" title="${cname(c)}: ${hand[c]||0}">${c==='W'?'Wild':esc(SHORT_NAME[c])}<span class="n">${hand[c]||0}</span></div>`).join('')+
-    `<button class="jamBtn ${jamMode?'on':''}" id="jamBtn" ${m.jam&&mine?'':'disabled'} title="Jam a free segment for 2 rounds (once per game)">🚧 ${m.jam?'Jam':'Used'}</button>`;
+    `<button class="jamBtn ${jamMode?'on':''}" id="jamBtn" ${m.jam&&(live?V.phase==='play'&&!V.over:mine)?'':'disabled'} title="${live?'Jam a free segment for 20 seconds (once per round)':'Jam a free segment for 2 rounds (once per game)'}">🚧 ${m.jam?'Jam':'Used'}</button>`;
   // map
   const can=new Set(),far=new Set();
   if(mine)SEGS.forEach(s=>{if(V.owners[s.i]!==null)return;const dep=!touchesV(s);if(payOptionsV(s,dep).length&&!blockedV(s.i)){can.add(s.i);if(dep&&m.at)far.add(s.i)}});
@@ -399,13 +434,23 @@ function render(){
   const want={};(m.tickets||[]).forEach((t,i)=>{const ok=!!(m.done&&m.done[i]);[t.a,t.b].forEach(id=>{want[id]=want[id]==='no'||!ok?'no':'ok'})});
   IDS.forEach(id=>{const r=STNEL[id].ring;r.visible=!!want[id];r.userData.ok=want[id]==='ok';r.material.color.set(want[id]==='ok'?'#0f9e86':'#ffc933');r.material.transparent=true;r.material.opacity=1});
   // trains
-  V.players.forEach((p,i)=>{const T=TRAIN[i];if(T.anim)return;if(!p.at){T.g.visible=false;return}T.at=p.at;placeTrain(i,...P(p.at));T.g.visible=true});
+  V.players.forEach((p,i)=>{const T=TRAIN[i];if(live&&p.moving&&!T.anim&&p.moving.t1>nowT())startAnim(i,p.moving.path,p.moving.t0,p.moving.t1,{ride:false});
+    if(T.anim)return;if(!p.at){T.g.visible=false;return}T.at=p.at;placeTrain(i,...P(p.at));T.g.visible=true});
+  if(live)syncFloats();else if(FLOATS.size){FLOATS.forEach(sp=>G.trains.remove(sp));FLOATS.clear()}
   renderTop();renderStatus();
+}
+function liveStrip(){
+  if(!LIVE())return;const c=$('ltClock'),pz=$('ltPass');if(!c||!pz)return;const tn=nowT();
+  if(V.over){c.firstChild.textContent='Done';c.classList.remove('hot')}
+  else if(V.phase==='between'){c.firstChild.textContent=Math.max(0,Math.ceil((V.breakEnds-tn)/1000))+'s';c.lastChild.textContent=`Round ${V.round+1} starts`;c.classList.remove('hot')}
+  else{const left=V.roundEnds-tn;c.firstChild.textContent=mmss(left);c.classList.toggle('hot',left<15000);c.lastChild.textContent=`Round ${V.round}/${V.rounds}`;
+    const f=1-Math.max(0,Math.min(1,(V.nextIncome-tn)/V.incomeMs));pz.querySelector('i').style.width=(f*100).toFixed(0)+'%'}
 }
 function renderTop(){
   const t=$('turnInfo');if(!V){t.textContent='';barKey='';return}
   let s='';
-  if(V.over)s='Game over';
+  if(LIVE()){const tn=nowT();s=V.over?'Commute over':V.phase==='between'?`Round ${V.round+1} in ${Math.max(0,Math.ceil((V.breakEnds-tn)/1000))}s`:`<b>Round ${V.round}/${V.rounds}</b> · ${mmss(V.roundEnds-tn)}`;s+=` · ${me().pts}★`}
+  else if(V.over)s='Game over';
   else if(V.phase==='tickets')s=`Choosing tickets${NET.on?' · '+mmss(V.ticketEnds-netNow()):''}`;
   else{const p=V.players[V.turn],who=V.turn===0?'<b>Your turn</b>':esc(p.name)+(p.bot?' 🤖':'');
     const sec=NET.on?Math.ceil((V.turnEnds-netNow())/1000):null;
@@ -418,6 +463,14 @@ function renderTop(){
 function renderStatus(){
   const st=$('status');let t='',mine=false;
   if(!V){st.textContent='';return}
+  if(LIVE()){const m=me();mine=V.phase==='play'&&!V.over;
+    if(V.over)t='Commute over. Tap ☰ for the standings.';
+    else if(V.phase==='between')t=`<span class="dot"></span>Round ${V.round+1} starts in ${Math.max(0,Math.ceil((V.breakEnds-nowT())/1000))}s…`;
+    else if(jamMode)t='Tap a free segment to jam it for 20 seconds. Tap 🚧 again to cancel.';
+    else if(m.moving)t='<span class="dot"></span>Your train is on its way…';
+    else if(!m.at)t='Tap any glowing segment to start driving. A pass arrives every few seconds; floating passes go to the first train there.';
+    else t='Tap a glowing segment to drive it, or a station on your line to go and fetch a pass.';
+    st.className=mine?'mine':'';st.innerHTML=t;return}
   if(V.over)t='Game over. Tap ☰ for the scores.';
   else if(V.offer)t='Choose which tickets to keep.';
   else if(V.phase==='tickets'){const n=V.players.filter(p=>p.choosing).length;t=`<span class="dot"></span>Waiting for ${n} player${n>1?'s':''} to choose tickets…`}
@@ -446,36 +499,25 @@ function showFreshLog(){const fresh=Math.min((V.logN||0)-lastLogN,4);for(let i=f
 /* ---- events: animate what just happened ---- */
 function handleEvents(ev){
   ev.forEach(e=>{
-    if(e.k==='drive')animateDrive(e.s,e.path,e.depot);
+    if(e.k==='drive'){if(LIVE())startAnim(e.s,e.path,e.t0,e.t1,{ride:true,depot:e.depot});else animateDrive(e.s,e.path,e.depot)}
+    else if(e.k==='go')startAnim(e.s,e.path,e.t0,e.t1,{ride:false});
+    else if(e.k==='grab'&&e.s===0)feed(`You picked up a ${cname(e.c)} pass.`,'good');
+    else if(e.k==='income'&&e.s===0){const ch=$('hand').querySelector(`[data-chip="${e.c}"]`);if(ch){ch.classList.remove('bump');void ch.offsetWidth;ch.classList.add('bump')}}
+    else if(e.k==='round'){feed(`Round ${e.n}: go!`,'good');if(sheetOpen()&&$('sheetBody').querySelector('[data-round]'))closeSheet(true)}
+    else if(e.k==='roundEnd')setTimeout(roundSheet,400);
     else if(e.k==='pick'){const b=$('market').querySelector(`[data-mk="${e.i}"]`);if(b)b.classList.add('pop')}
     else if(e.k==='turn'&&e.s===0&&!V.solo)feed('Your turn!','good');
     else if(e.k==='jam'||e.k==='fail'){const el=SEGEL[e.si];if(el){const [x,y]=[(C[SEGS[e.si].a].x+C[SEGS[e.si].b].x)/2,(C[SEGS[e.si].a].y+C[SEGS[e.si].b].y)/2];CAM.tx=WX(x);CAM.tz=WZ(y)}}
-    else if(e.k==='over')setTimeout(finalSheet,900);
+    else if(e.k==='over')setTimeout(LIVE()?commuteSheet:finalSheet,900);
   });
 }
 function animateDrive(seat,path,depot){
   const T=TRAIN[seat];if(!path||path.length<2)return;
-  const pts=path.map(id=>P(id));
-  T.g.visible=true;
-  if(T.anim)cancelAnimationFrame(T.anim.raf);
-  const legs=[];let total=0;
-  if(depot||T.at===null||T.at!==path[0]){ // hauled to the start: appear there, then drive the segment
-    const a=pts[pts.length-2];placeTrain(seat,a[0],a[1]);legs.push([pts[pts.length-2],pts[pts.length-1]]);
-  }else for(let i=1;i<pts.length;i++)legs.push([pts[i-1],pts[i]]);
-  legs.forEach(([a,b])=>total+=Math.hypot(b[0]-a[0],b[1]-a[1]));
-  const dur=Math.min(seat===0?3200:2200,500+total*(seat===0?4.2:3)),start=performance.now();
-  const heading0=Math.atan2(legs[0][1][1]-legs[0][0][1],legs[0][1][0]-legs[0][0][0]);
-  if(seat===0){CAM.ride={seat,heading:heading0,k:0,saved:{tx:CAM.tx,tz:CAM.tz,yaw:CAM.yaw,pitch:CAM.pitch,dist:CAM.dist}}}
-  const step=now=>{
-    let t=Math.min(1,(now-start)/dur);t=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
-    let d=t*total;
-    for(let i=0;i<legs.length;i++){const[a,b]=legs[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]);
-      if(d<=L||i===legs.length-1){const f=L?Math.min(1,d/L):1,hd=Math.atan2(b[1]-a[1],b[0]-a[0]);placeTrain(seat,a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,hd);if(CAM.ride&&CAM.ride.seat===seat)CAM.ride.heading=hd;break}d-=L}
-    if(t<1)T.anim.raf=requestAnimationFrame(step);
-    else{T.anim=null;T.at=path[path.length-1];placeTrain(seat,...pts[pts.length-1]);
-      if(CAM.ride&&CAM.ride.seat===seat){const sv=CAM.ride.saved;setTimeout(()=>{if(!CAM.ride||CAM.ride.seat!==seat)return;Object.assign(CAM.cur,{tx:TRAIN[seat].x,tz:TRAIN[seat].z,yaw:CAM.cur.yaw,pitch:CAM.cur.pitch,dist:CAM.cur.dist});CAM.ride=null;Object.assign(CAM,sv)},500)}}
-  };
-  T.anim={raf:requestAnimationFrame(step)};
+  const pts=path.map(id=>P(id));let total=0;
+  if(depot||T.at===null||T.at!==path[0])total=Math.hypot(pts[pts.length-1][0]-pts[pts.length-2][0],pts[pts.length-1][1]-pts[pts.length-2][1]);
+  else for(let i=1;i<pts.length;i++)total+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+  const dur=Math.min(seat===0?3200:2200,500+total*(seat===0?4.2:3)),t0=nowT();
+  startAnim(seat,path,t0,t0+dur,{ease:true,ride:true,depot});
 }
 
 /* ---- actions: the same call works solo (local engine) and online (sent to the server) ---- */
@@ -490,6 +532,13 @@ function tapSeg(si){
   if(!V)return;const o=V.owners[si];
   if(jamMode){if(o!==null){feed('You can only jam a free segment.','danger');return}if(blockedV(si)){feed('That segment is already closed.','danger');return}
     jamMode=false;send({t:'jam',si});render();return}
+  if(LIVE()){
+    if(o!==null||V.phase!=='play'||V.over){segInfo(si);return}
+    if(me().moving){feed('Your train is still moving.','danger');return}
+    if(blockedV(si)){feed(V.fail===si?'Signal failure: closed for now.':'Jammed: closed for now.','danger');return}
+    const s=SEGS[si],dep=!touchesV(s),opts=payOptionsV(s,dep);
+    if(!opts.length){const m=me();feed(m.trains<s.len?`Only ${m.trains} train${m.trains===1?'':'s'} left.`:`Need ${s.len}${dep&&m.at?'+1':''} ${s.c==='any'?'passes of one colour':LINES[s.c].name+' passes'}${dep&&m.at?' (depot run)':''}.`,'danger');return}
+    selSeg=null;send({t:'drive',si,o:opts[0]});return}
   if(o!==null||!myTurn()||V.drawn){segInfo(si);return}
   if(blockedV(si)){feed(V.fail===si?'Signal failure: closed this round.':'Jammed: closed for now.','danger');segInfo(si);return}
   driveSheet(si);
@@ -511,12 +560,16 @@ function driveSheet(si){
 function segInfo(si){
   const s=SEGS[si],o=V.owners[si],jam=V.jams[si];
   sheet(`<div class="kicker"><span class="lineDot" style="--c:${s.col}"></span>${esc(s.line)} · ${s.len} car${s.len>1?'s':''} · ${PTS[s.len]} pt</div><h3>${esc(nm(s.a))} → ${esc(nm(s.b))}</h3>
-  <p>${o===null?(V.fail===si?'⚠️ Signal failure: closed this round.':jam?`🚧 Jammed by ${jam.s===0?'you':esc(V.players[jam.s].name)} until round ${jam.until}.`:myTurn()&&V.drawn?'Finish drawing first; you can drive here next turn.':'Free. '+(myTurn()?'':'Wait for your turn to drive it.')):`Driven by ${o===0?'you':esc(V.players[o].name)}.`}</p>
+  <p>${o===null?(V.fail===si?'⚠️ Signal failure: closed for now.':jam?`🚧 Jammed by ${jam.s===0?'you':esc(V.players[jam.s].name)} ${LIVE()?`for ${Math.max(0,Math.ceil((jam.until-nowT())/1000))}s more`:`until round ${jam.until}`}.`:LIVE()?(V.phase==='play'?'Free. Tap it when you can pay for it.':'Free. The next round is about to start.'):myTurn()&&V.drawn?'Finish drawing first; you can drive here next turn.':'Free. '+(myTurn()?'':'Wait for your turn to drive it.')):`Driven by ${o===0?'you':esc(V.players[o].name)}.`}</p>
   <button class="btn" data-x="close">OK</button>`);
 }
+function onMyLine(id){return SEGS.some(s=>V.owners[s.i]===0&&(s.a===id||s.b===id))}
 function tapStation(id){
   const m=me(),tks=(m&&m.tickets||[]).filter(t=>t.a===id||t.b===id);
+  if(LIVE()&&canActLive()&&m.at&&id!==m.at&&onMyLine(id)){send({t:'go',id});return}
+  if(LIVE()&&m&&m.moving){feed('Your train is still moving.','danger');return}
   sheet(`<div class="kicker">${[...linesAt[id]].map(l=>`<span class="lineDot" style="--c:${SEGS.find(s=>s.line===l).col}"></span>`).join('')}${[...linesAt[id]].join(' · ')}</div><h3>${esc(nm(id))}</h3>
+  ${LIVE()&&(V.floats||[]).some(f=>f.id===id)?`<p>A <b>${esc(cname((V.floats.find(f=>f.id===id)).c))}</b> pass is floating here: the first train to stand here takes it. ${onMyLine(id)?'Tap the station to go there.':'It isn’t on your line yet.'}</p>`:''}
   ${tks.length?`<p>Your ticket${tks.length>1?'s':''} here: ${tks.map(t=>`<b>${esc(nm(t.a))} – ${esc(nm(t.b))}</b> (${t.p})`).join(', ')}.</p>`:'<p class="small">Interchanges are where lines meet: a network through one can switch lines for free.</p>'}
   <button class="btn" data-x="close">OK</button>`);
 }
@@ -535,7 +588,7 @@ function ticketSheet(){
     wire();highlightOffer();return;
   }
   sheet(`<div class="kicker">Your tickets</div><h3>${m.tickets.length?'Destinations':'No tickets yet'}</h3>
-  ${m.tickets.map((t,i)=>`<div class="tk ${m.done[i]?'ok':''}"><span class="box">${m.done[i]?'✓':''}</span><span><b>${esc(nm(t.a))} – ${esc(nm(t.b))}</b><span class="sub">${m.done[i]?'connected':'not connected yet'}</span></span><span class="pts">${m.done[i]?'+':'−'}${t.p}</span></div>`).join('')}
+  ${m.tickets.map((t,i)=>`<div class="tk ${m.done[i]?'ok':''}"><span class="box">${m.done[i]?'✓':''}</span><span><b>${esc(nm(t.a))} – ${esc(nm(t.b))}</b><span class="sub">${m.done[i]?'connected':'not connected yet'}</span></span><span class="pts">${m.done[i]?'+'+t.p:'−'+(LIVE()?Math.ceil(t.p*LIVE_MODES.live.missPenalty):t.p)}</span></div>`).join('')}
   ${myTurn()&&!V.drawn&&V.ticketDeckN?'<button class="btn primary" data-x="tix">Draw 3 new tickets (keep at least 1)</button>':''}
   <button class="btn" data-x="close">Close</button>`);
 }
@@ -546,6 +599,8 @@ const sheetEl=$('sheet'),scrim=$('scrim');let sheetLocked=false;
 function sheet(html,locked){$('sheetBody').innerHTML=html;sheetEl.classList.add('on');scrim.classList.add('on');sheetLocked=!!locked;
   $('sheetBody').querySelectorAll('[data-x]').forEach(b=>{const k=b.dataset.x;
     if(k==='close')b.onclick=()=>closeSheet();
+    else if(k==='sololive')b.onclick=()=>{closeSheet(true);newSolo('live')};
+    else if(k==='ride')b.onclick=()=>{RIDE.on=!RIDE.on;store.set('metro-ride',RIDE.on);b.textContent=RIDE.on?'Ride-along camera: on':'Ride-along camera: off'};
     else if(k==='tix')b.onclick=()=>{closeSheet();send({t:'tickets'})};
     else if(k==='help')b.onclick=()=>helpSheet();
     else if(k==='start')b.onclick=()=>startSheet();
@@ -561,7 +616,7 @@ function sheet(html,locked){$('sheetBody').innerHTML=html;sheetEl.classList.add(
       if(navigator.clipboard)navigator.clipboard.writeText(i.value).then(done,()=>{i.select();document.execCommand('copy');done()});else{i.select();document.execCommand('copy');done()}};
     else if(k==='share')b.onclick=()=>navigator.share({title:'Junction: Delhi Metro',text:`Join my metro room ${NET.code}`,url:roomLink()}).catch(()=>{});
     else if(k==='log')b.onclick=()=>logSheet();
-    else if(k==='scores')b.onclick=()=>finalSheet();
+    else if(k==='scores')b.onclick=()=>LIVE()?(V.over?commuteSheet():roundSheet()):finalSheet();
     else if(k==='tickets')b.onclick=()=>ticketSheet();
     else if(k==='theme')b.onclick=()=>{const d=document.documentElement,cur=d.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');d.dataset.theme=cur==='dark'?'light':'dark';store.set('metro-theme',d.dataset.theme)};
   });
@@ -576,15 +631,26 @@ const modeBtns=(sel,attr)=>Object.values(MODES).map(m=>`<button class="btn ${m.i
 function startSheet(){
   const st=store.get('metro-online');
   sheet(`<h1>Junction<br>Delhi Metro</h1><p class="small">Drive the metro. Claim the lines. Finish your tickets.</p>
-  <div class="kicker">Play solo against 3 robots</div><div class="modes">${modeBtns(SOLO_MODE,'solo-mode')}</div>
-  ${canOnline()?`<div class="kicker">Play with friends</div><button class="btn primary" data-x="online">Play online<small>Up to 4 players, robots fill the rest</small></button>
+  <div class="kicker">Rush Hour Live · everyone drives at once</div>
+  <button class="btn primary" data-x="sololive">Play now<small>3 rounds × 3 minutes against 3 robots</small></button>
+  ${canOnline()?`<button class="btn" data-x="online">Play online<small>Up to 4 players, robots fill the rest</small></button>
   ${st&&st.code?`<button class="btn" data-x="rejoin">Rejoin room ${esc(st.code)}<small>Pick up where you left off</small></button>`:`<button class="btn" data-x="joincode">Join with a code<small>A friend sent you 4 letters</small></button>`}`:''}
+  <div class="kicker">Prefer turns? Solo against 3 robots</div><div class="modes">${modeBtns(SOLO_MODE==='live'?'':SOLO_MODE,'solo-mode')}</div>
   <button class="btn" data-x="help">How to play</button>
   ${V&&!V.over&&(E||NET.on)?'<button class="btn" data-x="close">Back to the game</button>':''}`,true);
   $('sheetBody').querySelectorAll('[data-solo-mode]').forEach(b=>b.onclick=()=>{SOLO_MODE=b.dataset.soloMode;store.set('metro-mode',SOLO_MODE);closeSheet(true);newSolo(SOLO_MODE)});
 }
 function helpSheet(){
-  sheet(`<div class="kicker">How to play</div><h3>You’re a metro driver</h3>
+  sheet(`<div class="kicker">How to play · Rush Hour Live</div><h3>Everyone drives at once</h3>
+  <ul class="rules">
+  <li><b>3 rounds of 3 minutes.</b> Most points over the three rounds wins the commute.</li>
+  <li>A pass arrives <b>every few seconds</b>. Extra passes float above stations: the first train to stand there takes them.</li>
+  <li><b>Tap a glowing segment to drive it</b> the moment you can pay: one pass of its line colour per car, Smart Cards are wild. First tap takes it.</li>
+  <li>Your train takes real time to travel. Tap a station on your own line to go and fetch a floating pass.</li>
+  <li>Two secret <b>tickets</b> per round: the full value if your line joins both stations, minus half if not. Segments score 1 / 2 / 4 / 7; longest line +10.</li>
+  <li><b>Signal failures</b> close a segment for a while. One <b>🚧 Jam</b> per round closes a free segment for 20 seconds.</li>
+  </ul>
+  <div class="kicker">Turn by turn (Rush Hour, Full Line)</div>
   <ul class="rules">
   <li><b>Each turn, do one thing:</b> take 2 passes (face-up or from the deck), or drive one segment.</li>
   <li><b>Driving</b> a segment costs passes of its line colour, one per car. <b>Smart Cards</b> are wild. Grey, Aqua and Rapid Metro take any one colour.</li>
@@ -592,13 +658,34 @@ function helpSheet(){
   <li><b>Tickets</b> name two stations. Join them with your network for the points; unfinished tickets count against you.</li>
   <li>Segments score 1 / 2 / 4 / 7 for 1–4 cars. Longest unbroken line: +10. When someone has 2 trains left, everyone gets one more turn.</li>
   <li><b>Signal failures</b> close a random free segment every third round. Everyone has one <b>🚧 Jam</b>: close a free segment for 2 rounds.</li>
-  </ul><button class="btn primary" data-x="${V?'close':'start'}">${V?'Got it':'Back'}</button>`);
+  </ul><button class="btn" data-x="ride">Ride-along camera: ${RIDE.on?'on':'off'}</button><button class="btn primary" data-x="${V?'close':'start'}">${V?'Got it':'Back'}</button>`);
+}
+function scoreTable(rows,who){return `<table class="score"><tr><th>Driver</th><th>Lines</th><th>Tickets</th><th>Longest</th><th>Total</th></tr>
+  ${rows.map(r=>`<tr><td><span class="who"><span class="av" style="background:${V.players[r.s].col}"></span>${who(r.s)}</span></td><td>${r.rp}</td><td>${r.tp>0?'+':''}${r.tp}</td><td>${r.ex?'+10':'0'}</td><td class="tot">${r.total}</td></tr>`).join('')}</table>`}
+function roundSheet(){
+  if(!V||!V.final||!LIVE())return;const F=V.final,rows=F.rows,who=s=>s===0?'You':esc(V.players[s].name),w=rows[0];
+  sheet(`<div class="kicker" data-round="${F.round}">Round ${F.round} of ${V.rounds}${NET.on?' · room '+esc(NET.code):''}</div><h3>${w.s===0?'You took the round! 🎉':who(w.s)+' takes the round'}</h3>
+  ${scoreTable(rows,who)}
+  <ul class="rules small">${rows.map(r=>`<li><b>${who(r.s)}:</b> ${(r.tickets||[]).map((t,i)=>`${r.det[i]?'✓':'✗'} ${esc(nm(t.a))}–${esc(nm(t.b))} (${t.p})`).join(' · ')}</li>`).join('')}</ul>
+  <p class="small">Commute so far: ${V.players.map((p,i)=>`${i?esc(p.name):'You'} ${p.totals.reduce((a,b)=>a+b,0)}`).join(' · ')}</p>
+  ${V.over?'<button class="btn primary" data-x="scores">Commute standings</button>':`<p class="small" id="roundCd">Next round starts in ${Math.max(0,Math.ceil((V.breakEnds-nowT())/1000))}s.</p>`}
+  <button class="btn" data-x="close">Look at the map</button>`);
+}
+function commuteSheet(){
+  if(!V||!V.commute)return;const rows=V.commute,who=s=>s===0?'You':esc(V.players[s].name),w=rows[0];
+  sheet(`<div class="kicker">Commute standings${NET.on?' · room '+esc(NET.code):''}</div><h3>${w.s===0?'You win the commute! 🎉':who(w.s)+' wins the commute'}</h3>
+  <table class="score"><tr><th>Driver</th>${rows[0].totals.map((_,i)=>`<th>R${i+1}</th>`).join('')}<th>Wins</th><th>Total</th></tr>
+  ${rows.map(r=>`<tr><td><span class="who"><span class="av" style="background:${V.players[r.s].col}"></span>${who(r.s)}</span></td>${r.totals.map(t=>`<td>${t}</td>`).join('')}<td>${r.wins}</td><td class="tot">${r.total}</td></tr>`).join('')}</table>
+  ${NET.on?(NET.room&&NET.room.host?'<button class="btn primary" data-x="again">Play again in this room</button>':'<p class="small">The host can start another commute in this room.</p>')+'<button class="btn" data-x="leave">Leave room</button>':
+    `<button class="btn primary" data-x="sololive">Another commute</button><div class="modes">${modeBtns('','solo-mode')}</div>`}
+  <button class="btn" data-x="close">Look at the map</button>`);
+  $('sheetBody').querySelectorAll('[data-solo-mode]').forEach(b=>b.onclick=()=>{SOLO_MODE=b.dataset.soloMode;store.set('metro-mode',SOLO_MODE);closeSheet(true);newSolo(SOLO_MODE)});
 }
 function logSheet(){sheet(`<div class="kicker">Game log</div><ul class="logl">${(V?V.log:[]).map(l=>`<li class="${l.k}">${esc(personal(l.t))}</li>`).join('')||'<li>Nothing yet.</li>'}</ul><button class="btn" data-x="close">Close</button>`)}
 function menuSheet(){
   sheet(`<div class="kicker">${NET.on?'Online room '+esc(NET.code||''):'Solo game'}</div><h3>Menu</h3>
   ${NET.on&&NET.code?`<div class="share"><input readonly value="${esc(roomLink())}" aria-label="Invite link"><button class="btn" data-x="copy">Copy</button>${navigator.share?'<button class="btn" data-x="share">Share</button>':''}</div>`:''}
-  ${V&&V.over?'<button class="btn primary" data-x="scores">Final scores</button>':''}
+  ${V&&V.over?'<button class="btn primary" data-x="scores">Final scores</button>':LIVE()&&V&&V.final?'<button class="btn" data-x="scores">Last round’s scores</button>':''}
   <div class="row2"><button class="btn" data-x="tickets">My tickets</button><button class="btn" data-x="log">Game log</button></div><div style="height:10px"></div>
   <div class="row2"><button class="btn" data-x="help">How to play</button><button class="btn" data-x="theme">Light / dark</button></div><div style="height:10px"></div>
   ${NET.on?'<button class="btn danger" data-x="leave">Leave room<small>A robot takes your seat</small></button>':'<button class="btn" data-x="start">New game</button>'}
@@ -621,15 +708,18 @@ function finalSheet(){
 /* ---- solo: the same engine the server runs, driven by a timer in this tab ---- */
 function newSolo(mode){
   if(NET.on)netLeave('');
-  E=makeEngine();E.newGame([{name:'You'},{name:'Rose',bot:true},{name:'Sandy',bot:true},{name:'Mint',bot:true}],mode,Date.now(),{solo:true});
-  TRAIN.forEach(T=>{T.at=null;if(T.anim)cancelAnimationFrame(T.anim.raf);T.anim=null;T.g.visible=false});CAM.ride=null;CAM.home();
+  const seats=[{name:'You'},{name:'Rose',bot:true},{name:'Sandy',bot:true},{name:'Mint',bot:true}];
+  if(mode==='live'){E=makeLiveEngine();E.newGame(seats,'live',Date.now(),{solo:true})}
+  else{E=makeEngine();E.newGame(seats,mode,Date.now(),{solo:true})}
+  SOLO_MODE=mode;store.set('metro-mode',mode);
+  TRAIN.forEach(T=>{T.at=null;T.anim=null;T.g.visible=false});CAM.ride=null;CAM.home();FLOATS.forEach(sp=>G.trains.remove(sp));FLOATS.clear();
   jamMode=false;selSeg=null;NET.offerKey=null;NET.keep=new Set();NET.finalShown=false;
-  V=E.view(0);lastLogN=V.logN;render();ticketSheet();
+  V=E.view(0);lastLogN=V.logN;render();if(V.offer)ticketSheet();else feed('Round 1: go!','good');
 }
 setInterval(()=>{
   if(E&&!NET.on&&V&&!V.over){const ev=E.tick(Date.now());if(ev.length){V=E.view(0);showFreshLog();handleEvents(ev);render();if(V.offer&&!sheetOpen())ticketSheet()}}
-  if(NET.on&&V)renderTop();
-},120);
+  if(V){renderTop();if(LIVE()){liveStrip();const cd=$('roundCd');if(cd)cd.textContent=`Next round starts in ${Math.max(0,Math.ceil((V.breakEnds-nowT())/1000))}s.`;if(V.phase==='between'&&!sheetOpen()&&V.final)renderStatus()}}
+},80);
 
 /* ---- online ---- */
 const roomLink=()=>location.origin+location.pathname+'?room='+NET.code;
@@ -637,7 +727,7 @@ function onlineSheet(prefCode,focusCode){
   sheet(`<div class="kicker">Play online</div><h3>Ride with friends</h3>
   <p class="small">Up to 4 players. Robots fill empty seats and take over if someone drops out or runs out of time.</p>
   <label class="field"><span>Your name</span><input id="netName" maxlength="14" autocomplete="nickname" placeholder="e.g. Asha" value="${esc(store.get('metro-name')||'')}"></label>
-  <div class="kicker">Game length (for a new room)</div><div class="modes">${modeBtns(NET.pickMode,'pickmode')}</div>
+  <div class="kicker">Game (for a new room)</div><div class="modes"><button class="btn ${NET.pickMode==='live'?'sel':''}" data-pickmode="live" aria-pressed="${NET.pickMode==='live'}">Rush Hour Live<small>3 × 3 min, everyone at once</small></button>${modeBtns(NET.pickMode,'pickmode')}</div>
   <button class="btn primary" data-x="create">Create a room</button>
   <div class="kicker">or join a friend’s room</div>
   <div class="joinrow"><input id="netCode" class="code" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Room code" value="${esc(prefCode||'')}"><button class="btn" data-x="join">Join</button></div>
@@ -650,7 +740,7 @@ const netMsg=t=>{const m=$('netMsg');if(m)m.textContent=t};
 function netName(){const n=(($('netName')&&$('netName').value)||'').trim().slice(0,14);if(!n){netMsg('Type your name first.');$('netName')&&$('netName').focus();return null}store.set('metro-name',n);return n}
 async function netCreate(){
   if(!netName())return;netMsg('Creating a room…');
-  try{const r=await fetch('/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:'metro',mode:NET.pickMode})});const j=await r.json();
+  try{const r=await fetch('/api/rooms',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({game:NET.pickMode==='live'?'live':'metro',mode:NET.pickMode})});const j=await r.json();
     if(!r.ok||!j.code)throw new Error(j.error||'The server said no.');netConnect(j.code,null)}
   catch(e){netMsg('Couldn’t create a room: '+e.message)}
 }
@@ -660,7 +750,7 @@ async function netJoin(){
   if(!netName())return;netMsg('Looking for room '+code+'…');
   try{const r=await fetch('/api/rooms/'+code);const j=await r.json();
     if(!r.ok||!j.exists){netMsg('There’s no room '+code+'. Check the code, or create a new room.');return}
-    if(j.game&&j.game!=='metro'){netMsg('Room '+code+' is a Junction 3D (Europe) room. Opening it there…');setTimeout(()=>location.href='junction3d.html?room='+code,900);return}
+    if(j.game&&j.game!=='metro'&&j.game!=='live'){netMsg('Room '+code+' is a Junction 3D (Europe) room. Opening it there…');setTimeout(()=>location.href='junction3d.html?room='+code,900);return}
     if(j.over)netMsg('That game has finished. Ask the host to start another one.');
     const st=store.get('metro-online');netConnect(code,st&&st.code===code?st.token:null)}
   catch(e){netMsg('Couldn’t reach the server: '+e.message)}
@@ -694,7 +784,7 @@ function netLeave(msg,keepSeat){
   NET.closing=true;if(NET.ws){try{NET.ws.close()}catch(e){}}
   Object.assign(NET,{on:false,ws:null,room:null,gameKey:null,offerKey:null,code:null});
   if(!keepSeat)store.del('metro-online');history.replaceState(null,'',location.pathname);
-  V=null;E=null;TRAIN.forEach(T=>{T.g.visible=false;T.at=null});CAM.ride=null;
+  V=null;E=null;TRAIN.forEach(T=>{T.g.visible=false;T.at=null;T.anim=null});CAM.ride=null;FLOATS.forEach(sp=>G.trains.remove(sp));FLOATS.clear();
   $('players').innerHTML='';$('market').innerHTML='';$('hand').innerHTML='';renderTop();renderStatus();
   startSheet();if(msg)feed(msg,'danger');
 }
@@ -704,7 +794,7 @@ function netLobby(){
   <p class="small">Send friends this link or the code. Up to 4 players.</p>
   <div class="share"><input readonly value="${esc(roomLink())}" aria-label="Invite link"><button class="btn" data-x="copy">Copy</button>${navigator.share?'<button class="btn" data-x="share">Share</button>':''}</div>
   <div class="seats">${[0,1,2,3].map(i=>{const s=R.seats[i];return`<div class="seat ${s?'':'empty'}"><span class="av" style="background:${SEAT_COLS[i]}"></span><span>${s?esc(s.name)+(i===R.you?' (you)':''):'A robot plays here'}</span>${s&&s.host?'<span class="tag">Host</span>':''}${s&&!s.online?'<span class="off">offline</span>':''}</div>`}).join('')}</div>
-  <div class="kicker">Game length</div><div class="modes">${Object.entries(R.modes).map(([k,m])=>`<button class="btn ${k===R.mode?'sel':''}" data-netmode="${k}" ${R.host?'':'disabled'} aria-pressed="${k===R.mode}">${esc(m.name)}<small>${esc(m.blurb)} · ${m.trains} trains · ${m.turnSec}s turns</small></button>`).join('')}</div>
+  <div class="kicker">Game length</div><div class="modes">${Object.entries(R.modes).map(([k,m])=>`<button class="btn ${k===R.mode?'sel':''}" data-netmode="${k}" ${R.host?'':'disabled'} aria-pressed="${k===R.mode}">${esc(m.name)}<small>${esc(m.blurb)} · ${m.trains} trains · ${m.turnSec?m.turnSec+'s turns':'real time'}</small></button>`).join('')}</div>
   ${R.host?`<button class="btn primary" data-x="netstart">Start the game${humans<4?`<small>robots take ${4-humans} seat${4-humans>1?'s':''}</small>`:''}</button>`:'<p class="small">The host starts the game when everyone’s in.</p>'}
   <button class="btn" data-x="leave">Leave room</button>`,true);
 }
@@ -712,11 +802,12 @@ function netApply(v,ev){
   const fresh=NET.gameKey!==v.startedAt;
   V=v;
   if(fresh){NET.gameKey=v.startedAt;lastLogN=Math.max(0,(v.logN||0)-2);NET.offerKey=null;NET.keep=new Set();NET.finalShown=v.over;jamMode=false;selSeg=null;
-    TRAIN.forEach(T=>{T.at=null;if(T.anim)cancelAnimationFrame(T.anim.raf);T.anim=null});CAM.ride=null;CAM.home();if(sheetOpen())closeSheet(true)}
+    TRAIN.forEach(T=>{T.at=null;T.anim=null});CAM.ride=null;CAM.home();FLOATS.forEach(sp=>G.trains.remove(sp));FLOATS.clear();if(sheetOpen())closeSheet(true)}
   showFreshLog();handleEvents(ev);render();
   if(v.offer){if(!sheetOpen()||$('sheetBody').querySelector('[data-keep]'))ticketSheet()}
   else if($('sheetBody').querySelector('[data-keep]'))closeSheet(true);
-  if(v.over&&!NET.finalShown){NET.finalShown=true;setTimeout(finalSheet,1000)}
+  if(v.over&&!NET.finalShown){NET.finalShown=true;setTimeout(LIVE()?commuteSheet:finalSheet,1000)}
+  if(LIVE()&&v.phase==='between'&&v.final&&!sheetOpen()&&NET.roundShown!==v.round){NET.roundShown=v.round;roundSheet()}
 }
 
 /* ---- wiring ---- */
@@ -748,7 +839,7 @@ async function boot(){
 }
 boot();
 /* test hooks */
-window.J={get V(){return V},get E(){return E},get NET(){return NET},send,newSolo,netSend,tapSeg,payOptionsV,touchesV,blockedV,myTurn,ticketSheet,closeSheet,SEGS,C,MODES,
+window.J={get V(){return V},get E(){return E},get NET(){return NET},send,newSolo,netSend,tapSeg,payOptionsV,touchesV,blockedV,myTurn,LIVE,canActLive,onMyLine,ticketSheet,closeSheet,SEGS,C,MODES,LIVE_MODES,
   keepAll(){if(!V||!V.offer)return false;NET.keep=new Set(V.offer.list.map((_,i)=>i));NET.offerKey=JSON.stringify(V.offer.list);send({t:'keep',idx:[...NET.keep]});return true}};
 </script>
 </body>

@@ -7,10 +7,10 @@
   "scripts": {
     "build:3d": "python3 tools3d/build.py junction.html tools3d/junction3d.template.html junction3d.html && python3 tools3d/make_saboteur_template.py && python3 tools3d/build.py junction-saboteur.html tools3d/junction3d-saboteur.template.html junction3d-saboteur.html",
     "build": "npm run build:3d && node mp/build.mjs",
-    "sim": "node mp/build.mjs --engine && node mp/sim.mjs 200 blitz 1 && node mp/sim.mjs 200 classic 1 && node mp/metro-sim.mjs 200 rush 1 && node mp/metro-sim.mjs 200 full 1 && node mp/timeout-check.mjs",
+    "sim": "node mp/build.mjs --engine && node mp/sim.mjs 200 blitz 1 && node mp/sim.mjs 200 classic 1 && node mp/metro-sim.mjs 200 rush 1 && node mp/metro-sim.mjs 200 full 1 && node mp/live-sim.mjs 100 && node mp/timeout-check.mjs",
     "dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
-    "test:online": "node mp/metro-e2e.mjs && node mp/e2e.mjs",
+    "test:online": "node mp/metro-e2e.mjs http://localhost:8787 live && node mp/metro-e2e.mjs && node mp/e2e.mjs",
     "dev:fast": "npm run build && wrangler dev --var BOT_PACE:0.15"
   },
   "devDependencies": {

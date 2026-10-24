@@ -2,7 +2,8 @@
 //   node mp/timeout-check.mjs
 import * as EUROPE from '../worker/rules.gen.js';
 import * as METRO from '../metro/rules.js';
-for (const [game, { makeEngine, MODES }] of Object.entries({ europe: EUROPE, metro: METRO })) for (const mode of Object.keys(MODES)) for (const scenario of ['idle','away','return','takeover']) {
+import * as LIVE from '../metro/live.js';
+for (const [game, { makeEngine, MODES }] of Object.entries({ europe: EUROPE, metro: METRO, live: LIVE })) for (const mode of Object.keys(MODES)) for (const scenario of ['idle','away','return','takeover']) {
   let worst=0,stalls=0,busy=0;
   for (let g=0;g<30;g++){
     const E=makeEngine();let now=0;

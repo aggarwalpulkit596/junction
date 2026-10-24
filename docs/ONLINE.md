@@ -5,7 +5,8 @@
 | File | What it is |
 |---|---|
 | `mp/engine.template.js` | The Europe online rules engine (setup, actions, turn flow, bots, clock, per-seat views). Edit this. |
-| `metro/rules.js` | The Delhi Metro engine, same shape (`makeEngine`, `MODES`, `BOT_NAMES`). Imported by the Worker as is and inlined into `metro.html`. |
+| `metro/rules.js` | The Delhi Metro turn-based engine, same shape (`makeEngine`, `MODES`, `BOT_NAMES`). Imported by the Worker as is and inlined into `metro.html`. |
+| `metro/live.js` | Rush Hour Live, the real-time engine (game id `live`): no turns, income every few seconds, floating passes, trains that take time to travel, 3 rounds × 3 min. Same API as the others. |
 | `metro/metro.template.html` | The Delhi Metro client (3D board + phone HUD); `metro.html` is generated from it. |
 | `mp/build.mjs` | Splices slices of `junction.html` into the template → `worker/rules.gen.js`; assembles `public/`. |
 | `worker/index.js` | Cloudflare Worker (routing, room creation) and the `Room` Durable Object (one per room). |
@@ -26,7 +27,7 @@ float above cities as in 3D), the turn flow, the game clock, and a bot that retu
 
 ## Two games, one Room
 
-A room is created for one game, `europe` (Junction 3D) or `metro` (Delhi Metro), and keeps it: `POST /api/rooms {game, mode}`.
+A room is created for one game, `europe` (Junction 3D), `metro` (Delhi Metro, turns) or `live` (Rush Hour Live), and keeps it: `POST /api/rooms {game, mode}`.
 The `Room` object picks the matching engine (`GAMES[gameId].makeEngine()`), stores `gameId` in the room and reports it in
 `GET /api/rooms/:code` and in every `sync`'s `room.game`. Each page joins rooms of its own game and sends you to the other
 page when a code belongs to the other game. The landing page's code box peeks first and opens the right page.
@@ -48,6 +49,14 @@ Delhi Metro:
 | `full` | 24 | 40 s | 50 s | 25 min | 1 long + 3 short, keep ≥ 2 |
 
 The final round starts when someone has ≤ 2 trains, every route is taken, or the clock runs out.
+
+Rush Hour Live (`live`): 24 trains per round, 3 rounds of 180 s with a 10 s break, a pass to everyone every 3.4 s, up to 8
+floating passes (one spawns every 2 s), 0.9 s per car to drive, 0.32 s per car to shuttle, Signal Failures every 30 s for
+12 s, a Jam lasts 20 s. Actions: `{t:'drive',si,o?}` (o optional: the cheapest payment is used), `{t:'go',id}` (shuttle
+along your own track), `{t:'jam',si}`. Events: `drive {s,si,path,t0,t1,depot}`, `go {s,path,t0,t1}`, `grab {s,id,c}`,
+`income {s,c}`, `spawn {id,c}`, `jam`, `fail`, `round {n}`, `roundEnd {n}`, `over`. The view carries `floats`, each
+player's `moving {path,t0,t1}` (the client interpolates), `roundEnds`, `breakEnds`, `nextIncome`, `final` (last round) and
+`commute` (standings). All times are server milliseconds; the client applies its clock skew.
 
 ## A room's life
 

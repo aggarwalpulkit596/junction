@@ -2,6 +2,21 @@
 
 Short version of [`docs/ITERATIONS.md`](docs/ITERATIONS.md). Newest first.
 
+## 1.2.0 — Rush Hour Live (2026-10-24)
+
+### Added
+- **Rush Hour Live**, the new default way to play Delhi Metro: no turns, everyone drives at once. A pass arrives every
+  few seconds, extra passes float above stations for the first train there, tap a segment to drive it the moment you can
+  pay, trains take real time to travel. 3 rounds × 3 minutes, 10-second break, best total wins the commute. Solo against
+  robots or online (game id `live`, same rooms and codes).
+- `metro/live.js` (the real-time engine, shared by browser and Worker), `mp/live-sim.mjs`, live mode in
+  `mp/metro-e2e.mjs` and `mp/timeout-check.mjs`.
+- A ride-along camera toggle (How to play sheet).
+
+### Changed
+- The start screen leads with "Play now" (live); the turn-based Rush Hour and Full Line sit under "Prefer turns?".
+- Train animation is time-based in both modes, so a reload mid-move picks up where the train is.
+
 ## 1.1.0 — Junction: Delhi Metro (2026-10-24)
 
 ### Added

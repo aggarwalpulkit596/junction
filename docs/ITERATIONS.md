@@ -167,7 +167,48 @@ built for one thumb.
 
 ---
 
+## Iteration 6: Rush Hour Live (real time, instant rematch)
+
+**Goal.** Make Delhi Metro something people play several times a day, the way Mini Militia, Among Us and PUBG are
+played: short rounds that start in seconds, everyone acting at once (no waiting for turns), a reason to say "one more".
+
+**What changed.**
+
+- **A real-time engine**, `metro/live.js`, on the same map and passes. No turns: every 3.4 seconds the depot sends each
+  driver a pass; extra passes float above stations and go to whichever train stands there first. Tap a free segment you
+  can pay for and your train sets off immediately (first tap takes it); trains take real time to travel (0.9 s per car),
+  so you can't claim again until you arrive, and you can shuttle along your own track to fetch floating passes.
+  Depot runs, Signal Failures (every 30 s, 12 s long) and one Jam per round (20 s) carry over. Two secret tickets per
+  round, worth at most 7, and a missed ticket costs only half (a first cut charged the full value and most round scores
+  came out negative, which felt like losing even when you won). **3 rounds of 3 minutes, 10-second break, best total
+  wins the commute.** 24 trains per round.
+- **The client** renders a live HUD (round clock, next-pass meter, live score, round wins as dots), floating passes as
+  bobbing sprites on the 3D board, trains interpolated from the server's `moving {path, t0, t1}` so motion is smooth
+  whatever the sync rate, one-tap driving (no payment sheet; the cheapest option is used), tap a station on your line to
+  go there, a round sheet with a countdown that closes itself when the next round starts, and a commute standings
+  sheet with "Another commute". The turn-based Rush Hour and Full Line stay as "Prefer turns?".
+- **Online**: a third game id, `live`, on the same rooms and codes. The Room picks the engine by `gameId`, as before.
+- **Timing is server time**: every deadline in the view is an absolute timestamp; the client applies its clock skew.
+
+**How it was checked.**
+
+- `node mp/live-sim.mjs 100`: 100 commutes with four robots, 0 stalls. Rounds last ~160 s (about two thirds run the
+  full 3 minutes, the rest end when every train is used up), ~44 of 66 segments claimed per round, robots finish with
+  under one train left, round scores from ~22 (last) to ~42 (first), ~7 jams and ~13 signal failures per commute,
+  14% of drives are depot runs.
+- `node mp/timeout-check.mjs`: idle, away, returning and taken-over seats never stall the live game either.
+- `node mp/metro-e2e.mjs http://localhost:8787 live`: two real browsers play a full three-round commute online, one
+  reloads mid-round and keeps its train, a third joins and takes over a robot, both see the same board, commute
+  standings, rematch.
+- Headless-Chrome smoke run of a solo commute (drives, shuttles, floating passes, round sheet, next round).
+
+---
+
 ## Ideas for the next iterations
+
+- Rush Hour Live: a **Daily Commute** (one seeded map and ticket set per day, a leaderboard and a shareable result
+  card), driver names and liveries unlocked by streaks, pick-ups on the board (Express, extra Jam), horn and near-miss
+  effects, and more cities (Mumbai, Bengaluru, Kolkata) as levels.
 
 - Delhi Metro: landmarks on the board (India Gate, Qutub Minar, Lotus Temple), sound, a share-your-result card,
   a "public rooms" list so strangers can play.

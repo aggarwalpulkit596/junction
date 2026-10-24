@@ -14,10 +14,21 @@ Do not use the original board game's name, board art, or trade dress, or art fro
   segments take any one colour); a non-touching segment is a **depot run** (+1 pass of any kind, `drivePath` returns `depot`); segments score
   `PTS` 1/2/4/7; tickets ±; longest line +10; final round at ≤2 trains. Disruption: `S.fail` (Signal Failure every `FAIL_EVERY`=3 rounds)
   and one `jam` per player (`JAM_ROUNDS`=2). Bots: `wanted` (Dijkstra over unfinished tickets), `bestDrive`, `botJam`, `botNext`.
-- **`metro/metro.template.html`**: the client. Renders only from a view `V` (local engine in solo via `E.tick(Date.now())` every 120 ms,
+- **`metro/live.js`**: **Rush Hour Live**, the real-time engine (game id `live`, the default way to play). Imports map data from `rules.js`;
+  exports `makeLiveEngine`/`LIVE_MODES` (aliased to `makeEngine`/`MODES` for the Worker; `mp/build.mjs` strips the import/export lines
+  when inlining both files into `metro.html`, so names must not clash with `rules.js`). No turns: `tick(now)` hands out income every
+  `incomeMs`, spawns `S.floats` (grabbed by the first train standing there, `grabAt`), moves trains (`p.moving {path,t0,t1,si}`, `arrive`),
+  runs Signal Failures/Jams on millisecond timers and the robots (`botNext` every `botThinkMs`). Actions `drive` (claims at once, train
+  travels `carMs` per car, shuttling along own track `shuttleCarMs` per car), `go` (shuttle to a station on your line), `jam`. Rounds:
+  `newRound` → `endRound` (`S.final` {round, rows, maxL}) → `between` (`breakEnds`) → … → `S.commute` standings and `S.over`.
+  `mp/live-sim.mjs 100`: ~165 s rounds, ~44/66 segments claimed, 0 stalls.
+- **`metro/metro.template.html`**: the client. Renders only from a view `V` (local engine in solo via `E.tick(Date.now())` every 80 ms,
   or the server's `sync` online), so solo and online share every screen. Three.js r160 (jsDelivr) 3D board: `buildMap` (viaduct ribbons,
   car slots, station cylinders, label sprites that rescale with zoom), `CAM` (drag pan, pinch/wheel zoom, two-finger or shift-drag turn,
-  `CAM.ride` follows your train during `animateDrive`), raycast taps → `tapSeg`/`tapStation`. HUD: market, chips, Jam button, sheets.
+  `CAM.ride` follows your train during a drive, toggle `RIDE.on`), raycast taps → `tapSeg`/`tapStation`. HUD: market, chips, Jam button, sheets.
+  `LIVE()` branches: train motion is time-based (`startAnim {path,t0,t1}`, interpolated in `frame()` from `nowT()` = server time + skew),
+  floating passes are sprites (`syncFloats`), the market strip becomes the live strip (`liveStrip`: round clock, next-pass meter, score),
+  one-tap `drive` (cheapest payment), tap a station on your line → `go`, `roundSheet` (auto-closes on the `round` event) and `commuteSheet`.
   Wide screens (≥900px) put the board beside the controls. Test hooks on `window.J` (`V`, `send`, `newSolo`, `keepAll`, `payOptionsV`…).
 - `mp/metro-sim.mjs` (balance, virtual clock), `mp/metro-e2e.mjs` (two real browsers against `wrangler dev`).
 - `junction.html`: the 2D Europe game (HTML + CSS + JS, no build step). Open it in a browser.
